@@ -342,7 +342,7 @@ CFRelease(desc);
 
 ```objc
 __block BOOL errorDuringDownload = NO;
-      CTFontDescriptorMatchFontDescriptorsWithProgressHandler((__bridge CFArrayRef)descs, NULL, ^bool(CTFontDescriptorMatchingState state, CFDictionaryRef  _Nonnull progressParameter) {
+CTFontDescriptorMatchFontDescriptorsWithProgressHandler((__bridge CFArrayRef)descs, NULL, ^bool(CTFontDescriptorMatchingState state, CFDictionaryRef  _Nonnull progressParameter) {
         
     double progressValue = [[(__bridge NSDictionary *)progressParameter objectForKey:(id)kCTFontDescriptorMatchingPercentage] doubleValue];
         
@@ -370,7 +370,15 @@ __block BOOL errorDuringDownload = NO;
     
 
 
+## 6 安全性问题
 
+- 网络安全：json 字段加密，使其不能直观的猜出内容
+
+- js 文件安全：将 js 源码进行混淆和加密，防止黑客轻易的阅读和篡改相关的逻辑，也可以防止自己的 Web 端和 Native 端通讯协议泄漏
+
+- 本地数据安全：对于本地的重要数据，我们应该加密存储或者将其保存到 keychain 中，以保证其不被篡改 
+
+- 源代码安全：对于 IDA 这类工具，我们的应对措施就比较少了，除了用一些宏来简单混淆类名外，我们也可以将关键的逻辑用存 C 实现，不但保证安全性，还可以在 iOS 和 Android 使用同一套底层通讯代码，达到复用的目的。
 
 
 
