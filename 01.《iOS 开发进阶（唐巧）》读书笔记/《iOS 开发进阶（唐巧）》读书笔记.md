@@ -2,7 +2,7 @@
 
 
 
-## 1.CocoaPods 的安装和使用
+## 1. CocoaPods 的安装和使用
 
 CocoaPods 是开发 iOS 应用程序的一个第三方库的依赖管理工具，起始于2011年8月，用 Ruby 写的。
 
@@ -115,7 +115,7 @@ pod update  --no-repo-update
 
 
 
-## 2.网络封包分析工具 Charles
+## 2. 网络封包分析工具 Charles
 
 ### 2.1 功能简介
 
@@ -193,7 +193,7 @@ Rewrite 功能适合做批量和长期的替换，临时性的修改最好使用
 
 
 
-## 3.其他一些实用的工具
+## 3. 其他一些实用的工具
 
 
 ### 3.1 界面调试工具 Reveal
@@ -234,7 +234,7 @@ Dash 是一款 API 文档查询及代码片段管理工具，超级好用
 
 
 
-## 4.理解内存管理
+## 4. 理解内存管理
 
 ### 4.1 我们为什么需要引用计数
 
@@ -248,7 +248,7 @@ Dash 是一款 API 文档查询及代码片段管理工具，超级好用
 
 ### 4.2 不要向已经释放的对象发送消息
 
-```
+```objc
 NSObject *obj = [[NSObject alloc] init];
 NSLog(@"Reference Count = %u", [obj retainCount]);
 [obj release];
@@ -272,7 +272,7 @@ Reference Count = 1
 
 ### 4.4 使用 Leaks 检测循环引用
 
-```
+```objc
 - (void)viewDidLoad {
     [super viewDidLoad];
 
@@ -289,7 +289,7 @@ Reference Count = 1
 
 ### 4.5 Core Foundation 对象的内存管理
 
-```
+```objc
 CFStringRef str = CFStringCreateWithCString(kCFAllocatorDefault, "hello world", kCFStringEncodingUTF8);
     
 CFRetain(str);  // 引用计数 +1
@@ -306,7 +306,7 @@ CFRetain 和 CFRelease 方法与 Objective-C 对象的 retain 和 release 方法
 
 
 
-## 5.动态下载系统提供的多种中文字体
+## 5. 动态下载系统提供的多种中文字体
 
 字体文件通常比较大，10 ~ 20 MB 是常见的字体库的大小，并且中文字体通常都是有版权的，所以使用特殊中文字体库的 iOS 应用较少，通常只有阅读类的应用才会使用特殊中文字体库。从 iOS 6 开始，苹果支持动态下载中文字体到系统中，使用系统提供的中文字体，既可以避免版权问题，又可以减少应用体积。
 
@@ -314,7 +314,7 @@ CFRetain 和 CFRelease 方法与 Objective-C 对象的 retain 和 release 方法
 
 假如我们现在要下载“娃娃体”，它的 PostScript 名称为“DFWaWaSC-W5”，首先判断该字体是否已经被下载下来
 
-```
+```objc
 - (BOOL)isfontDownloaded:(NSString *)fontName
 {
     UIFont *aFont = [UIFont fontWithName:fontName size:12.0];
@@ -328,7 +328,7 @@ CFRetain 和 CFRelease 方法与 Objective-C 对象的 retain 和 release 方法
 
 如果该字体没有下载过，我们需要准备下载字体 API 需要的一些参数
 
-```
+```objc
 NSMutableDictionary *attrs = [NSMutableDictionary dictionaryWithObjectsAndKeys:fontName, kCTFontNameAttribute, nil];
     
 // 创建一个字体描述对象
@@ -340,7 +340,7 @@ CFRelease(desc);
 
 准备好上面的 descs 变量后，就可以进行字体的下载了
 
-```
+```objc
 __block BOOL errorDuringDownload = NO;
       CTFontDescriptorMatchFontDescriptorsWithProgressHandler((__bridge CFArrayRef)descs, NULL, ^bool(CTFontDescriptorMatchingState state, CFDictionaryRef  _Nonnull progressParameter) {
         
