@@ -389,7 +389,7 @@ CTFontDescriptorMatchFontDescriptorsWithProgressHandler((__bridge CFArrayRef)des
 
 ### 7.1 CoreText 和 UIWebView 比较
 
-![CoreText和UIWebView](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/pic/pic01.png)
+![CoreText和UIWebView](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic01.png)
 
 #### 优点
 
@@ -446,7 +446,7 @@ CFRelease(framesetter);
 
 将 MYView 添加到主界面控制器中，运行后如图所示：
 
-![CoreText运行结果](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/pic/pic02.png)
+![CoreText运行结果](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic02.png)
 
 如果将步骤 3 改写成
 
@@ -458,7 +458,7 @@ CGPathAddEllipseInRect(path, NULL, self.bounds);  // 规定椭圆范围
 
 运行后效果如下，这里是文字比较少，正常是规定了一个椭圆范围
 
-![CoreText运行结果](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/pic/pic03.png)
+![CoreText运行结果](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic03.png)
 
 
 
@@ -726,18 +726,6 @@ self.myView.height = data.height;
 @end
 ```
 
+运行效果如下
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+![排版引擎框架运行结果](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic04.png)
