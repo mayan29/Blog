@@ -383,6 +383,356 @@ CTFontDescriptorMatchFontDescriptorsWithProgressHandler((__bridge CFArrayRef)des
 
 
 
+## 7 基于 CoreText 的排版引擎
+
+使用 CoreText 技术，我们可以对富文本进行复杂的排版。经过一些简单的扩展，我们还可以实现对于图片、链接的点击效果。CoreText 技术相对于 UIWebView 有内存占用少，可以后台渲染的优点，非常适合排版工作。
+
+### 7.1 CoreText 和 UIWebView 比较
+
+![CoreText和UIWebView](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/pic/pic01.png)
+
+#### 优点
+
+- CoreText 占用的内存少，渲染速度更快；
+- CoreText 在渲染界面前就可以精确的获得显示内容的高度（只要有了 CTFrame 即可），而 UIWebView 只有渲染出内容后，才能获得内容的高度（而且还需要用 JavaScript 代码来获取）；
+- CoreText 的 CTFrame 可以在后台线程渲染，UIWebView 的内容只能在主线程渲染；
+- 基于 CoreText 可以做更好的原生交互效果，而 UIWebView 的交互效果都是用 JavaScript 来实现的，在交互效果上会有一些卡顿情况存在。
+
+### 缺点
+
+- CoreText 渲染出来的内容不能像 UIWebView 那样方便的支持内容的复制；
+- 基于 CoreText 来排版需要自己处理很多复杂的逻辑，例如需要自己处理图片和文字混排相关的逻辑，也需要自己实现链接点击操作的支持。
+
+
+
+### 7.2 基于 CoreText 的基础排版引擎
+
+#### 不带图片的排版引擎
+
+新创建 MYView 类，继承 UIView，在 drawRect: 方法中实现如下代码:
+
+```objc
+- (void)drawRect:(CGRect)rect
+{
+[super drawRect:rect];
+
+// 1.获得当前绘制画布的上下文
+CGContextRef context = UIGraphicsGetCurrentContext();
+
+// 2.将坐标系上下翻转。对于底层的绘制引擎来说，屏幕的左下角是（0，0）坐标，这里做一个坐标系的上下翻转操作
+CGContextSetTextMatrix(context, CGAffineTransformIdentity);
+CGContextTranslateCTM(context, 0, self.bounds.size.height);
+CGContextScaleCTM(context, 1.0, -1.0);
+
+// 3.创建绘制的区域
+CGMutablePathRef path = CGPathCreateMutable();
+CGPathAddRect(path, NULL, self.bounds);
+
+// 4.
+NSString *drawStr = @"两会闭幕后两天，总理就在部署落实《政府工作报告》工作时加入一项新任务：设立专项资金，组织相关学科优秀科学家，集中攻关雾霾形成机理与治理。一个多月后的4月26日，李克强主持召开国务院常务会议确定，开展由环境保护部牵头，科技、中科院、高校、农业、工信、气象、卫生等多部门和单位协作的“集中攻关”。";
+NSAttributedString *attrStr = [[NSAttributedString alloc] initWithString:drawStr];
+CTFramesetterRef framesetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)attrStr);
+CTFrameRef frame = CTFramesetterCreateFrame(framesetter, CFRangeMake(0, attrStr.length), path, NULL);
+
+// 5.
+CTFrameDraw(frame, context);
+
+// 6.
+CFRelease(frame);
+CFRelease(path);
+CFRelease(framesetter);
+}
+```
+
+将 MYView 添加到主界面控制器中，运行后如图所示：
+
+![CoreText运行结果](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/pic/pic02.png)
+
+如果将步骤 3 改写成
+
+```objc
+// 3.创建绘制的区域
+CGMutablePathRef path = CGPathCreateMutable();
+CGPathAddEllipseInRect(path, NULL, self.bounds);  // 规定椭圆范围
+```
+
+运行后效果如下，这里是文字比较少，正常是规定了一个椭圆范围
+
+![CoreText运行结果](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/pic/pic03.png)
+
+
+
+#### 排版引擎框架
+
+如果要制作一个较完善的排版引擎，我们不能简单的将所有代码都放到 MYView 的 drawRect: 方法里面，根据设计模式“单一功能原则”将 MYView 中的部分内容拆开，分为 4 个类：
+
+1. MYFrameParserConfig 类，用于配置绘制的参数，例如文字颜色、大小、行间距等；
+2. MYFrameParser 类，用于生成最后绘制界面需要的 MYFrameRef 实例；
+3. CoreTextData 类，用于保存由 MYFrameParser 类生成的 MYFrameRef 实例，以及 MYFrameRef 实际绘制需要的高度；
+4. MYView 类，持有 CoreTextData 类的实例，负责将 MYFrameRef 绘制到界面上。
+
+关于这四个类的关键代码如下，Demo 点击[这里](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/排版引擎框架.zip)下载
+
+```objc
+#import <Foundation/Foundation.h>
+#import <CoreText/CoreText.h>
+
+
+@interface CoreTextData : NSObject
+
+
+@property (nonatomic, assign) CTFrameRef ctFrame;
+@property (nonatomic, assign) CGFloat height;
+
+@end
+```
+
+```objc
+#import "CoreTextData.h"
+
+@implementation CoreTextData
+
+
+- (void)setCtFrame:(CTFrameRef)ctFrame
+{
+if (_ctFrame != ctFrame) {
+if (_ctFrame != nil) {
+CFRelease(_ctFrame);
+}
+CFRetain(ctFrame);
+_ctFrame = ctFrame;
+}
+}
+
+- (void)dealloc
+{
+if (_ctFrame != nil) {
+CFRelease(_ctFrame);
+_ctFrame = nil;
+}
+}
+
+@end
+```
+
+```objc
+#import <Foundation/Foundation.h>
+
+@class MYFrameParserConfig;
+@class CoreTextData;
+@interface MYFrameParser : NSObject
+
+
++ (CoreTextData *)parseContent:(NSString *)content config:(MYFrameParserConfig *)config;
+
+@end
+```
+
+```objc
+#import "MYFrameParser.h"
+#import "CoreTextData.h"
+#import "MYFrameParserConfig.h"
+#import <CoreText/CoreText.h>
+
+@implementation MYFrameParser
+
+
++ (NSDictionary *)attributesWithConfig:(MYFrameParserConfig *)config
+{
+
+// 0.textColor
+UIColor *textColor = config.textColor;
+CGColorRef textColorRef = textColor.CGColor;
+
+
+// 1.fontSize
+CGFloat fontSize = config.fontSize;
+CTFontRef fontRef = CTFontCreateWithName((CFStringRef)@"ArialMT", fontSize, NULL);
+
+
+// 2.lineSpacing
+CGFloat lineSpacing = config.lineSpace;
+
+const CFIndex kNumberOfSettings = 3;
+CTParagraphStyleSetting theSettings[kNumberOfSettings] = {  // 段落样式
+
+{ kCTParagraphStyleSpecifierLineSpacingAdjustment, sizeof(CGFloat), &lineSpacing },  // 段落样式行间距调整
+{ kCTParagraphStyleSpecifierMaximumLineSpacing, sizeof(CGFloat), &lineSpacing },  // 段落样式的最大间距
+{ kCTParagraphStyleSpecifierMinimumLineSpacing, sizeof(CGFloat), &lineSpacing }  // 段落样式的最小间距
+};
+
+CTParagraphStyleRef theParagraphRef = CTParagraphStyleCreate(theSettings, kNumberOfSettings);
+
+
+// 生成字典
+NSDictionary *dic = @{
+(id)kCTForegroundColorAttributeName : (__bridge id)textColorRef,
+(id)kCTFontAttributeName : (__bridge id)fontRef,
+(id)kCTParagraphStyleAttributeName : (id)theParagraphRef
+};
+
+
+CFRelease(theParagraphRef);
+CFRelease(fontRef);
+return dic;
+}
+
+
+
++ (CoreTextData *)parseContent:(NSString *)content config:(MYFrameParserConfig *)config
+{
+NSDictionary *attributes = [self attributesWithConfig:config];
+NSAttributedString *contentString = [[NSAttributedString alloc] initWithString:content attributes:attributes];
+
+// 创建 CTFramesetterRef 实例
+CTFramesetterRef framesetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)contentString);
+
+// 获得要绘制的区域的高度
+CGSize restrictSize = CGSizeMake(config.width, CGFLOAT_MAX);
+CGSize coreTextSize = CTFramesetterSuggestFrameSizeWithConstraints(framesetter, CFRangeMake(0, 0), nil, restrictSize, nil);
+CGFloat textHeight = coreTextSize.height;
+
+// 生成 CTFrameRef 实例
+CTFrameRef frame = [self createFrameWithFramesetter:framesetter config:config height:textHeight];
+
+// 将生成好的 CTFrameRef 实例和计算好的绘制高度保存到 CoreTextData 实例中，最后返回 CoreTextData 实例
+CoreTextData *data = [[CoreTextData alloc] init];
+data.ctFrame = frame;
+data.height = textHeight;
+
+// 释放内存
+CFRelease(frame);
+CFRelease(framesetter);
+return data;
+}
+
++ (CTFrameRef)createFrameWithFramesetter:(CTFramesetterRef)framesetter config:(MYFrameParserConfig *)config height:(CGFloat)height
+{
+CGMutablePathRef path = CGPathCreateMutable();
+CGPathAddRect(path, NULL, CGRectMake(0, 0, config.width, height));
+
+CTFrameRef frame = CTFramesetterCreateFrame(framesetter, CFRangeMake(0, 0), path, NULL);
+CFRelease(path);
+return frame;
+}
+
+@end
+```
+
+```objc
+#import <UIKit/UIKit.h>
+
+@interface MYFrameParserConfig : NSObject
+
+
+@property (nonatomic, assign) CGFloat width;
+@property (nonatomic, assign) CGFloat fontSize;
+@property (nonatomic, assign) CGFloat lineSpace;
+@property (nonatomic, assign) UIColor *textColor;
+
+@end
+```
+
+```objc
+#import "MYFrameParserConfig.h"
+
+@implementation MYFrameParserConfig
+
+
+
+- (instancetype)init
+{
+self = [super init];
+if (self) {
+
+_width = 200.0f;
+_fontSize = 16.0f;
+_lineSpace = 8.0f;
+_textColor = [UIColor blackColor];
+}
+return self;
+}
+
+@end
+```
+
+```objc
+#import <UIKit/UIKit.h>
+
+@class CoreTextData;
+@interface MYView : UIView
+
+
+@property (nonatomic, strong) CoreTextData *data;
+
+@end
+```
+
+```objc
+#import "MYView.h"
+#import "CoreTextData.h"
+
+@implementation MYView
+
+
+- (void)drawRect:(CGRect)rect
+{
+[super drawRect:rect];
+
+CGContextRef context = UIGraphicsGetCurrentContext();
+CGContextSetTextMatrix(context, CGAffineTransformIdentity);
+CGContextTranslateCTM(context, 0, self.bounds.size.height);
+CGContextScaleCTM(context, 1.0, -1.0);
+
+if (self.data) {
+CTFrameDraw(self.data.ctFrame, context);
+}
+}
+
+@end
+```
+```objc
+#import "ViewController.h"
+
+#import "MYView.h"
+#import "MYFrameParserConfig.h"
+#import "CoreTextData.h"
+#import "MYFrameParser.h"
+
+@interface ViewController ()
+
+@property (weak, nonatomic) IBOutlet MYView *myView;
+
+@end
+
+@implementation ViewController
+
+- (void)viewDidLoad {
+[super viewDidLoad];
+
+
+NSString *content = @"一家最传统的服装企业通过“互联网+”和“双创”转型升级，年出口额达到15亿美元，同时吸纳了大量就业；来自小微企业的小商品源源不断地通过威海港运往周边和欧美国家。李克强在会上谈起上周在山东的考察时感叹道：“中国老百姓中真是蕴藏着无穷的创造力！”";
+
+
+MYFrameParserConfig *config = [[MYFrameParserConfig alloc] init];
+config.textColor = [UIColor blackColor];
+config.width = self.myView.bounds.size.width;
+
+CoreTextData *data = [MYFrameParser parseContent:content config:config];
+self.myView.data = data;
+self.myView.height = data.height;
+}
+
+@end
+```
+
+
+
+
+
+
+
+
 
 
 
