@@ -403,4 +403,112 @@ CTFontDescriptorMatchFontDescriptorsWithProgressHandler((__bridge CFArrayRef)des
 - CoreText 渲染出来的内容不能像 UIWebView 那样方便的支持内容的复制；
 - 基于 CoreText 来排版需要自己处理很多复杂的逻辑，例如需要自己处理图片和文字混排相关的逻辑，也需要自己实现链接点击操作的支持。
 
-[]()
+点击[这里](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/基于%20CoreTxt%20的排版引擎.pdf)查看更多
+
+
+## 8. 实战技巧
+
+### 8.1 申请加急审核
+
+1. 访问 iTunes Connect 网站：[https://itunesconnect.apple.com](https://itunesconnect.apple.com) 
+2. 单击网站底部的 Contact Us 按钮
+3. 在问题 1 中选择 App Review
+4. 在问题 2 中选择 Request Expedited Review
+5. 单击 Request an Expedited App Review 按钮即可填写加急审核的申请表。最好使用英文填写，最容易通过的理由是严重的崩溃 bug（在理由一栏选择 Critical Bug Fix），在原因处详细描述该 bug 的重现步骤，则很容易使申请通过。
+
+### 8.2 如何将应用下架
+
+最简单的办法是将应用的上架时间改成未来的一个时间，这样就会在数小时之内下架
+
+### 8.3 NSJSONSerialization 比 NSKeyedArchiver 更好
+
+在选择持久化方案时，系统提供的 NSJSONSerialization 比 NSKeyedArchiver 在效率和体积上都更优。经过测试，NSJSONSerialization 比 NSKeyedArchiver 快了 7 倍，而且序列化之后的体积是 NSKeyedArchiver 的一半。
+
+```objc
+NSLog(@"NSJSONSerialization 开始存储");
+    
+NSMutableArray *persons1 = [NSMutableArray array];
+for (int i = 0; i < 100000; i++) {
+        
+    [persons1 addObject:[NSJSONSerialization dataWithJSONObject:dic options:0 error:nil]];
+}
+    
+NSLog(@"NSJSONSerialization 结束存储");
+NSLog(@"NSKeyedArchiver 开始存储");
+
+    
+NSMutableArray *persons2 = [NSMutableArray array];
+for (int i = 0; i < 100000; i++) {
+        
+    [persons2 addObject:[NSKeyedArchiver archivedDataWithRootObject:dic]];
+}
+    
+    
+NSLog(@"NSKeyedArchiver 结束存储");
+```
+
+测试结果为：NSJSONSerialization 用了 0.426 秒，NSKeyedArchiver 用了 4.344 秒
+
+
+### 8.4 设置应用内的系统控件语言
+
+在 iOS 系统中，有时候会需要调用系统的一些 UI 控件，例如：
+
+- 在 UIWebView 中长按会弹出系统的上下文菜单；
+- 在 UIImagePickerController 中会使用系统的照相机界面；
+- 在编辑状态下的 UITableViewCell 处于待删除状态时，会有一个系统的删除按钮；
+
+以上 UI 控件中，显示的语言并不是和你当前手机的系统语言一致的，语言设置成中文，需要在 info.plist 文件中增加以下内容即可
+
+```objc
+<key>CFBundleLocalizations</key>
+<array>
+	<string>zh_CN</string>
+	<string>en</string>
+</array>
+```
+
+
+### 8.5 用截屏功能来实现侧滑返回效果
+
+iOS 7 以后的系统，可以通过系统提供的 API 来实现截屏功能
+
+```objc
+- (nullable UIView *)snapshotViewAfterScreenUpdates:(BOOL)afterUpdates;
+```
+
+早期的 QQ 在侧滑到一半的时候，整个当前界面被移动到了右半部分，同时在左半部分以半透明的方式露出了上一个界面。由于 ViewController 并不支持自己的 view 设置透明，所以需要我们自己实现。
+
+为了使用截屏功能达到这种效果，我们在 NavigationController 进入到一个新的 ViewController 前，先进行截屏操作，保存当前的界面效果，然后将截到的当前界面作为参数，传递给目标 ViewController 当作背景。
+
+这样，平时这个背景我们用内容遮挡住，当用户用手指向右滑动，我们将整个界面右移，露出这个背景，于是就会像看到了上一个 ViewController 一样。
+
+### 8.6 内存警告
+
+1. CALayer 是一个 bitmap 图像的容器类，当 UIView 调用自身的 drawRect 时，CALayer 才会创建这个 bitmap 图像类。
+2. CALayer 只占 48 Bytes，UIView 只占 96 Bytes，而一个 iPad 的全屏 UIView 的 bitmap 类会占到 12 MB 的大小！
+3. 当系统发出 MemoryWarning 时，系统会自动回收 bitmap 类，但是不回收 UIView 和 CALayer 类。这样既能回收大部分内存，又能在需要 bitmap 类时，通过调用 UIView 的 drawRect 方法重建。
+4. 当一段内存被分配时，它会被标记成 In use 以防止被重复使用，当内存被释放时，这段内存会被标记成 Not in use，这样在有新的内存申请时，这块内存就可能被分配给其他变量。
+5. CALayer 包括的具体的 bitmap 内容的私有成员变量类型为 CABackingStore，当收到 MemoryWarning 时，CABackingStore 类型的内存区会被标记成可能再次被原变量使用。
+
+
+### 8.7 Xcode 快捷键
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
