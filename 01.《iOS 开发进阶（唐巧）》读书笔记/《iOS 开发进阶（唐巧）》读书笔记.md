@@ -729,3 +729,24 @@ self.myView.height = data.height;
 运行效果如下
 
 ![排版引擎框架运行结果](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic04.png)
+
+
+#### 定制排版文件格式
+
+对于上面的例子，我们给 MYFrameParser 增加了一个将 NSString 转换为 CoreTextData 的方法，但是这样的实现方式有很多局限性，因为整个内容虽然可以定制字体大小、颜色、行高等信息，但是却不支持定制内容中的某一部分。
+
+解决方法很简单，我们让 MYFrameParser 支持接受 NSAttributeString 作为参数，然后在 ViewController 类中设置我们想要的 NSAttributeString 信息。
+
+更进一步的，实际工作中，我们可以规定排版的模板文件为 JSON 格式：
+
+![JSON格式](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic05.png)
+
+具体代码实现 Demo 点击[这里](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/排版引擎框架（复杂文字排版）.zip)下载
+
+#### 支持图文混排的排版引擎
+
+在上一小节中，我们在设置模板文件时，就专门在模板文件中留一个名为 type 的字段，用于表示内容的类型。之前的 type 值都是 txt，这次我们增加一个值为 img 的值，用于表示图片。
+
+![JSON格式](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic06.png)
+
+实际开发中，应用的模板和图片通常是通过服务器获取的，模板是纯文本的内容，获取速度比图片快很多，通常做法是直到需要显示图片的时候，再加载图片内容。所以我们要在这里指定图片的宽高。
