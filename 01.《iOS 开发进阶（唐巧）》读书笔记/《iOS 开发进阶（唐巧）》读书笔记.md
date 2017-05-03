@@ -494,11 +494,78 @@ iOS 7 以后的系统，可以通过系统提供的 API 来实现截屏功能
 
 ### 8.7 Xcode 快捷键
 
+常用快捷键
+
+快捷键 | 说明 
+--- | ---
+Ctrl + 6 | 列出当前文件中所有方法，快速定位方法位置
+Cmd + Ctrl + Up | 在 .h 和 .m 文件之间切换
+Cmd + Ctrl + Left | 到上 / 下一次编辑的位置
+Cmd + Shift + F | 在工程中查找
+Cmd + . | 结束本次调试
+
+不太常用快捷键
+
+快捷键 | 说明 
+--- | ---
+Cmd + Shift + Y | 切换控制台的显示或隐藏
+Cmd + 0 | 隐藏左边的导航区
+Cmd + Opt + 0 | 隐藏右边的工具区
+Cmd + Shift + K | 清空编译好的文件
 
 
 
 
 
+## 9. Objective-C 对象
+
+### 9.1 isa 指针
+
+- 每一个对象都是一个类的实例，每一个对象都有一个名为 isa 的指针，指向该对象的类；
+- 每一个类描述了它的实例的特点，包括成员变量的列表、成员函数的列表等；
+- 每一个对象都可以接收消息，消息列表保存在它所对应的类中。每一个类也可以接收消息，例如 [NSObject alloc]；
+- 每一个类也是一个对象，每一个类也有一个 isa 的指针，所以它必须是另一个类的实例，这个类就是元类。元类保存了类方法的列表。当一个类方法被调用时，元类会首先查找它本身是否有该类方法的实现，如果没有，该元类会向它的父类查找该方法；
+- 元类也是一个对象，为了设计上的完整，所有的元类的 isa 指针都会指向一个根元类，根元类本身的 isa 指针指向自己；
+
+
+### 9.2 动态创建类和对象
+
+```objc
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    
+    // 创建一个名为 MYView 的类，它是 UIView 的子类
+    Class newClass = objc_allocateClassPair([UIView class], "MYView", 0);
+    
+    // 为该类增加一个名为 report 的方法
+    class_addMethod(newClass, NSSelectorFromString(@"report"), (IMP)ReportFunction, "v@:");
+    
+    // 注册该类
+    objc_registerClassPair(newClass);
+    
+    
+    // 创建一个 MYView 类的实例
+    id instanceOfNewClass = [[newClass alloc] init];
+    // 调用 report 方法
+    [instanceOfNewClass performSelector:NSSelectorFromString(@"report")];
+}
+
+void ReportFunction(id self, SEL _cmd)
+{
+    NSLog(@"Class is %@, and super is %@", [self class], [self superclass]);
+}
+```
+
+9.3 动态方法替换
+
+- class_replaceMethod，当需要替换的方法有可能不存在时使用；
+- method_exchangeIpmlementations，当需要交换两个方法的实现时使用；
+- method_setImplementation，仅仅需要为一个方法设置其实现方式时使用。
+
+
+
+## 10. Tagged Pointer 对象
 
 
 
