@@ -1,6 +1,8 @@
 # 《iOS 开发进阶（唐巧）》读书笔记
 
 
+[TOC]
+
 
 ## 1. CocoaPods 的安装和使用
 
@@ -579,14 +581,14 @@ iPhone 5s 配备了首个采用 64 位架构的 A7 双核处理器，同时提�
 
 所以如果没有 Tagged Pointer 对象，从 32 位机器迁移到 64 位机器中，虽然逻辑没有变化，但是对象所占用的内存会翻倍：
 
-![CoreText和UIWebView](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic02.jpg)
+![32 位](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic02.jpg)
 
 
 ### 10.2 Tagged Pointer 介绍
 
 为了改进上面提到的内存占用和效率问题，苹果提出了 Tagged Pointer 对象。将一个对象的指针拆成两部分，一部分直接保存数据，另一部分作为特殊标记，表示这是一个特别的指针，不指向任何一个地址，64 位 CPU 下 NSNumber 的内存图变成下面这样：
 
-![CoreText和UIWebView](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic03.jpg)
+![64 位](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic03.jpg)
 
 ### 10.3 Tagged Pointer 特点
 
@@ -631,6 +633,19 @@ bit 位 | 变量名 | 意义
 19 bits | extra_rc | 表示该对象超过 1 的引用计数值，例如，如果该对象的引用计数是 6，则 extra_rc 的值为 5 
 
 
+
+## 11. block 对象
+
+### 11.1 block 内部数据结构定义
+
+一个 block 实例由 6 部分构成：
+
+1. isa 指针
+2. flags，用于按 bit 位表示一些 block 的附加信息 
+3. reserved，保留变量
+4. invoke，函数指针，指向具体的 block 实现的函数调用地址
+5. descriptor，表示该 block 的附加描述信息，主要是 size 大小，以及 copy 和 dispose 函数的指针
+6. variables，capture 过来的变量，block 能够访问它外部的局部变量，就是因为将这些变量（或变量的地址）复制到了结构体中。
 
 
 
