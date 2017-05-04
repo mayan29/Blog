@@ -1,7 +1,6 @@
 # 《iOS 开发进阶（唐巧）》读书笔记
 
 
-[TOC]
 
 
 ## 1. CocoaPods 的安装和使用
@@ -638,6 +637,23 @@ bit 位 | 变量名 | 意义
 
 ### 11.1 block 内部数据结构定义
 
+```objc
+struct Block_descriptor {
+    unsigned long int reserved;
+    unsigned long int size;
+    void (*copy)(void *dst, void *src);
+    void (*dispose)(void *);
+};
+
+struct Block_layout {
+    void *isa;
+    int flags;
+    int reserved; 
+    void (*invoke)(void *, ...);
+    struct Block_descriptor *descriptor;
+};
+```
+
 一个 block 实例由 6 部分构成：
 
 1. isa 指针
@@ -647,6 +663,63 @@ bit 位 | 变量名 | 意义
 5. descriptor，表示该 block 的附加描述信息，主要是 size 大小，以及 copy 和 dispose 函数的指针
 6. variables，capture 过来的变量，block 能够访问它外部的局部变量，就是因为将这些变量（或变量的地址）复制到了结构体中。
 
+### 11.2 block 三种类型
+
+- _NSConcreteGlobalBlock，全局的静态 block，不会访问任何外部变量；
+- _NSConcreteStackBlock，保存在栈中的 block，当函数返回时会被销毁；
+- _NSConcreteMallocBlock，保存在堆中的 block，当引用计数为 0 时会被销毁。
 
 
+#### NSGlobalBlock
 
+```objc
+void(^myBlock)() = ^{
+    NSLog(@"hello world");
+};
+    
+NSLog(@"%@", myBlock);  // <__NSGlobalBlock__: 0x10d65b240>
+```
+
+对 NSGlobalBlock 的 retain、copy、release 操作都无效。
+
+#### NSStackBlock
+
+在 MRC 模式下打印：
+
+```
+int num = 10;
+void(^myBlock)() = ^{
+    NSLog(@"malloc block and num = %d", num);
+};
+    
+NSLog(@"%@", myBlock);  // <__NSStackBlock__: 0x7fff574d5a08>
+```  
+
+block 在函数退出的时候，就会被回收，如果再调用该 block 会导致 crash
+
+在 ARC 模式下打印：
+
+```
+int num = 10;
+void(^myBlock)() = ^{
+    NSLog(@"malloc block and num = %d", num);
+};
+    
+NSLog(@"%@", myBlock);  // <__NSMallocBlock__: 0x600000048220>
+```  
+
+这里为什么打印的是 NSMallocBlock 呢？在 ARC 模式下生成的 block 也是 NSStackBlock，只是当赋值给 strong 对象时，系统会主动对其进行 copy，将栈上复制到堆上。如果不赋值，直接打印，则为 NSStackBlock   
+
+```
+int num = 10;
+    
+NSLog(@"%@", ^{
+    NSLog(@"hello world and num = %d", num);
+});  // <__NSStackBlock__: 0x7fff574d5a08>
+```
+
+### 11.3 循环引用
+
+1. 在 MRC 时代，__block 修饰避免循环引用；ARC 时代，__block 修饰同样会引起循环引用；
+2. 不用 __block 修饰，block 外的变量引用，是复制其本事；使用 __block 修饰，block 外的变量引用，是复制其引用地址；
+3. 
