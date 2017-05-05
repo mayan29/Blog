@@ -258,7 +258,7 @@ NSLog(@"Reference Count = %u", [obj retainCount]);
 
 输出结果可能是这样的
 
-```
+```objc
 Reference Count = 1
 Reference Count = 1
 ```
@@ -686,7 +686,7 @@ NSLog(@"%@", myBlock);  // <__NSGlobalBlock__: 0x10d65b240>
 
 在 MRC 模式下打印：
 
-```
+```objc
 int num = 10;
 void(^myBlock)() = ^{
     NSLog(@"malloc block and num = %d", num);
@@ -699,7 +699,7 @@ block 在函数退出的时候，就会被回收，如果再调用该 block 会�
 
 在 ARC 模式下打印：
 
-```
+```objc
 int num = 10;
 void(^myBlock)() = ^{
     NSLog(@"malloc block and num = %d", num);
@@ -710,7 +710,7 @@ NSLog(@"%@", myBlock);  // <__NSMallocBlock__: 0x600000048220>
 
 这里为什么打印的是 NSMallocBlock 呢？在 ARC 模式下生成的 block 也是 NSStackBlock，只是当赋值给 strong 对象时，系统会主动对其进行 copy，将栈上复制到堆上。如果不赋值，直接打印，则为 NSStackBlock   
 
-```
+```objc
 int num = 10;
     
 NSLog(@"%@", ^{
