@@ -148,3 +148,31 @@ switch (_currentState) {
 ```
 
 用枚举来定义状态，最好不要有 default 分支，这样的话，如果稍后又加了一种状态，那么编译器就会发出警告信息，提示新加入的状态并未在 switch 分支中处理。
+
+
+## 6. 理解属性这一概念
+
+```objc
+@interface MYPerson : NSObject {
+
+	NSString *_firstName;
+	NSString *_lastName;
+	
+@end
+```
+
+以上写法一般是 Java 和 C++ 的写法，而 OC 代码却很少这么做。这种写法的问题是：对象布局在`编译期`（compile time）就已经固定了。只要碰到访问 _fistName 变量的代码，编译器就把其替换为`偏移量`（offset），这个偏移量是`硬编码`（hardcode），表示该变量距离存放对象的内存区域的起始地址有多远。这样做目前来看没有问题，但是如果又加了一个实例变量，那就麻烦了。比如在 _firstName 之前又多了一个实例变量：
+
+```objc
+@interface MYPerson : NSObject {
+
+	NSString *_dateOfBirth;
+	NSString *_firstName;
+	NSString *_lastName;
+	
+@end
+```
+
+原来表示 _firstName 的偏移量现在却指向 _dataOfBirth，把偏移量硬编码于其中的那些代码都会读取到错误的值
+
+![在类中新增另一个实例变量前后的数据布局图](ddd)
