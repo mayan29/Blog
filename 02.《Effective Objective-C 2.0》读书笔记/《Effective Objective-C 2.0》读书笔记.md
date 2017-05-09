@@ -330,3 +330,161 @@ objc_msgSend 函数依据`接受者`（receiver）和`选择子`（selector）�
 
 ### 10.1 动态方法解析
 
+对象在收到无法解读的消息后，首先将调用其所属类的下列类方法：
+
+```objc
++ (BOOL)resolveInstanceMethod:(SEL)selector
+```
+
+如果尚未实现的方法是类方法，那么会调用：
+
+```objc
++ (BOOL)resolveClassMethod:(SEL)selector
+```
+
+该方法的参数就是那个未知的选择子，其返回值为 BOOL 类型，表示这个类是否能新增一个实例方法用以处理此选择子。
+
+使用这种方法的前提是：相关方法的实现代码已经写好，只等着运行时动态插在类里面就可以了。
+
+举个例子，调用 Person 的 fly 方法
+
+```objc
+Person *p = [[Person alloc] init];
+    
+SEL sel = NSSelectorFromString(@"fly");
+[p performSelector:sel];
+```    
+
+```objc
+#import "Person.h"
+#import <objc/runtime.h>
+
+@implementation Person
+
+
++ (BOOL)resolveInstanceMethod:(SEL)sel
+{
+    
+    NSString *selString = NSStringFromSelector(sel);
+    if ([selString isEqualToString:@"fly"]) {
+        
+        class_addMethod(self, sel, (IMP)fly, "v@:");
+        
+        return YES;
+    }
+    return [super resolveInstanceMethod:sel];
+}
+
+void fly(id self, SEL _cmd) {
+    
+    NSLog(@"抱歉，人是不能飞的");
+}
+
+@end
+```
+
+### 10.2 备援的接收者
+
+如果上一步没有找到自定义的方法实现，这一步中，运行时系统会问它，能不能把这条消息转给其他接收者来处理
+
+在上例中，如果 `resolveInstanceMethod:` 没有方法实现，则通过 `forwardingTargetForSelector:` 方法指定其他类来实现
+
+```objc
+#import "Person.h"
+#import "Bird.h"
+
+@interface Person ()
+
+@property (nonatomic, strong) Bird *bird;
+
+@end
+
+@implementation Person
+
+- (Bird *)bird
+{
+    if (!_bird) {
+        _bird = [[Bird alloc] init];
+    }
+    return _bird;
+}
+
+- (id)forwardingTargetForSelector:(SEL)aSelector
+{
+    
+    NSString *selString = NSStringFromSelector(aSelector);
+    if ([selString isEqualToString:@"fly"]) {
+        
+        return self.bird;
+    }
+    return [super forwardingTargetForSelector:aSelector];
+}
+
+@end
+```
+
+不用在 Bird.h 中暴露方法名，在 Bird.m 中实现即可
+
+```objc
+#import "Bird.h"
+
+@implementation Bird
+
+- (void)fly
+{
+    NSLog(@"我能飞");
+}
+
+@end
+```
+
+### 10.3 完整的消息转发
+
+如果转发算法已经来到这一步的话，则启用完整的消息转发机制。
+
+```objc
+#import "Person.h"
+#import "Bird.h"
+
+@interface Person ()
+
+@property (nonatomic, strong) Bird *bird;
+
+@end
+
+@implementation Person
+
+- (Bird *)bird
+{
+    if (!_bird) {
+        _bird = [[Bird alloc] init];
+    }
+    return _bird;
+}
+
+- (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector
+{
+    NSMethodSignature *signature = [super methodSignatureForSelector:aSelector];
+    
+    if (!signature) {
+        if ([Bird instancesRespondToSelector:aSelector]) {
+            signature = [Bird instanceMethodSignatureForSelector:aSelector];
+        }
+    }
+    return signature;
+}
+
+- (void)forwardInvocation:(NSInvocation *)anInvocation
+{
+    if ([Bird instancesRespondToSelector:anInvocation.selector]) {
+        [anInvocation invokeWithTarget:self.bird];
+    }
+}
+
+@end
+```
+
+接收者在每一步均有机会处理消息，步骤越往后，处理消息的代价就越大，最好能在第一步就处理完，这样的话，运行时就可以将此方法缓存取来了。若想在第三步里把消息转给备援的接收者，那还不如把转发操作提前到第二步。因为第三步只是修改了调用目标，这项改动放在第二步执行会更为简单，不然的话，还得创建并处理完整的 NSInvocation
+
+
+## 11. 52页
