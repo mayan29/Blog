@@ -175,4 +175,158 @@ switch (_currentState) {
 
 原来表示 _firstName 的偏移量现在却指向 _dataOfBirth，把偏移量硬编码于其中的那些代码都会读取到错误的值
 
-![在类中新增另一个实例变量前后的数据布局图](ddd)
+![在类中新增另一个实例变量前后的数据布局图](https://github.com/Mayan29/ReadingNotes/blob/master/02.《Effective%20Objective-C%202.0》读书笔记/DATA/pic01.png)
+
+如果代码使用了编译期间计算出来的偏移量，那么在修改类定义之后必须重新编译，否则就会出错。
+
+OC 的做法是，把实例变量当做一种存储偏移量所用的`特殊变量`（special variable），交由`类对象`（class object）保管，偏移量会在运行期查找，如果类的定义变了，那么存储的偏移量也就变了，所以总能使用正确的偏移量，甚至可以在运行期向类中新增实例变量。
+
+这个问题还有一种解决方法，就是尽量不要直接访问实例变量，应该通过存取方法来做。OC 这门语言就是根据名称自动创建出存取方法，也就是@property语法。
+
+所有属性都声明为 nonatomic 是因为：在 iOS 中使用同步锁开销较大，一般不要求属性必须是原子的，因为这并不能保证线程安全，若要实现线程安全，还需采用更为深层的锁定机制才行。例如，一个线程在连续多次读取某属性值的过程中有别的线程在同时改写改值，那么即便将属性声明为 atomic 也还是会读到不同的属性值。
+
+
+## 7. 在对象内部尽量直接访问实例变量
+
+直接访问实例变量和通过属性访问区别如下：
+
+- 直接访问实例变量的速度更快，由于不经过 OC 的方法派发（method dispatch），编译器所生成的代码会直接访问保存对象实例变量的那块内存；
+
+- 直接访问实例变量不会调用设置方法，比如在 ARC 下直接访问一个声明为 copy 的属性，那么并不会拷贝该属性，只会保留新值并释放旧值；
+
+- 直接访问实例变量不会触发 KVO 通知；
+
+- 通过属性访问有助于排查与之相关的错误
+
+总结为：在对象内部读取数据时，直接通过实例变量来读；写入数据时，通过属性 set 方法来写。
+
+
+## 8. 以类族模式隐藏实现细节
+
+`类族`（class cluster）是一种很有用的模式，可以隐藏`抽象基类`（abstract base class）背后的实现细节，例如 UIButton 的类方法：
+
+```objc
++ (UIButton *)buttonWithType:(UIButtonType)type;
+```
+
+该方法所返回的对象，其类型取决于传入的按钮类型，然而，不管返回什么类型的对象，他们都继承同一个基类：UIButton，这么做的意义是，UIButton 的使用者无须关心创建出来的按钮具体属于哪个子类，只需明白如何创建按钮，设置属性即可。
+
+举一个例子，创建一个 MYPerson 抽象类，MYStudent、MYTeacher、MYWorker 每一个子类都继承 MYPerson
+
+```objc
+#import <Foundation/Foundation.h>
+
+@interface MYPerson : NSObject
+
+
+typedef NS_ENUM(NSUInteger, MYPersonType) {
+
+    MYPersonTypeStudent,
+    MYPersonTypeTeacher,
+    MYPersonTypeWorker,
+};
+
+
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic, assign) NSUInteger age;
+
+
+
++ (instancetype)personWithType:(MYPersonType)type;
+
+
+- (void)introduceMyself;
+
+@end
+```
+
+```objc
+#import "MYPerson.h"
+#import "MYStudent.h"
+#import "MYTeacher.h"
+#import "MYWorker.h"
+
+@implementation MYPerson
+
+
++ (instancetype)personWithType:(MYPersonType)type
+{
+    switch (type) {
+        case MYPersonTypeStudent:
+            return [[MYStudent alloc] init];
+            break;
+        case MYPersonTypeTeacher:
+            return [[MYTeacher alloc] init];
+            break;
+        case MYPersonTypeWorker:
+            return [[MYWorker alloc] init];
+            break;
+    }
+}
+
+
+- (void)introduceMyself
+{
+    NSLog(@"%@", self.class);
+}
+
+
+@end
+```
+
+方法调用，打印结果为 MYWorker
+
+```objc
+MYPerson *person = [MYPerson personWithType:MYPersonTypeWorker];
+[person introduceMyself];
+```
+
+## 9. 理解 objc_msgSend 的作用
+
+### 9.1 基本消息传递
+
+```objc
+void objc_msgSend(id self, SEL cmd, ...)
+```
+
+objc_msgSend 函数依据`接受者`（receiver）和`选择子`（selector）的类型来调用适当的方法，该方法需要在接受者所属的类中搜寻其`方法列表`（list of methods），如果能找到与选择子名称相符的方法，就跳至其实现代码。如果找不到，就沿着继承体系继续向上查找，找到合适的方法再跳转。如果最终还是找不到，那就执行`消息转发`（message forwarding）
+
+这么说来，想调用一个方法似乎需要很多步骤，但是，objc_msgSend 会将匹配结果缓存在`快速映射表`（fast map）里面，每个类都有这样一块缓存，如果稍后还向该类发送与选择子相同的消息，那么执行起来就很快了。
+
+### 9.2 其他消息传递
+
+#### objc\_msgSend\_stret
+
+如果待发送的消息要返回结构体，可交由此函数处理。只有当 CPU 的寄存器能够容纳得下消息返回类型时，这个函数才能处理。如果返回的结构体太大了，就由另一个函数执行派发，会通过分配在栈上的某个变量来处理消息所返回的结构体。
+
+#### objc\_msgSend\_fpret
+
+如果消息返回的是浮点数，那么可交由此函数处理。通常所用的 objc_msgSend 在这种情况下并不适合，这个函数是为了处理 x86 等架构 CPU 中某些奇怪状况。
+
+#### objc\_msgSendSuper
+
+如果要给超类发消息，例如 `[super message:parameter]`，那么就交由此函数处理。也有另外两个与 objc_msgSend_stret 和 objc_msgSend_fpret 等效的函数，用于处理发给 super 的相应消息。
+
+### 9.3 尾调用优化
+
+每个类里都有一张表格，其中的指针都会指向这个函数，而选择子的名称则是查表时所用的 key，objc_msgSend 等函数的原理是，通过这张表格来寻找应该执行的方法。
+
+原型的样子和 objc_msgSend 函数很像，这是利用`尾调用优化`（tail-call optimization）技术（函数最后一项操作是调用另外一个函数），编译器会生成跳转至另一个函数所需的指令码，而且不会向调用堆栈中推入新的`栈帧`（frame stack）。这项优化对 objc_msgSend 非常关键，如果不这么做的话，每次调用 OC 方法之前，都需要为调用 objc_msgSend 函数准备栈帧。此外，若不优化，还会过早的发生`栈溢出`（stack overflow）现象。
+
+
+## 10. 理解消息转发机制
+
+在编译期间向类发送了其无法解读的消息并不会报错，因为在运行期可以继续向类中添加方法。当对象接收到无法解读的消息后，就会启动`消息转发`（message forwarding）机制。
+
+消息转发分为两大阶段
+
+#### 动态方法解析（dynamic method resolution）
+
+征询接收者，所属的类，看是否能动态添加方法，以处理当前这个`未知的选择子`（unknown selector）
+
+#### 完整的消息转发机制（full forwarding mechanism）
+
+首先，接受者看看有没有其他对象能处理这条消息，如果有，运行时会把消息转给那个对象，消息转发过程结束，一切正常。若没有`备援的接收者`（replacement receiver）则启动完整的消息转发机制，运行时会把与消息有关的全部细节封装到 NSInvocation 对象中，再给接受者最后一次机会，令其设法解决当前还未处理的这条消息。
+
+### 10.1 动态方法解析
+
