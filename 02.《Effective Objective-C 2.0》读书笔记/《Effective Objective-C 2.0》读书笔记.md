@@ -491,4 +491,87 @@ void fly(id self, SEL _cmd) {
 
 ### 11.1 自定义初始化方法
 
-64页
+```objc
+#import "Person.h"
+
+@implementation Person
+
+
+- (instancetype)initWithName:(NSString *)name
+{
+    self = [super init];
+    if (self) {
+        NSLog(@"我的名字为：%@", name);
+    }
+    return self;
+}
+
+- (instancetype)init
+{
+    @throw [NSException exceptionWithName:NSInternalInconsistencyException reason:@"Person 类必须使用 initWithName: 方法初始化" userInfo:nil];
+}
+
+@end
+```
+
+### 11.2 实现 description 方法
+
+调试程序时，经常需要打印并查看对象信息，比如打印数组信息：
+
+```objc/Users/may-g/Desktop/立刻删除/立刻删除
+NSArray *arr = @[@1, @2, @3, @4];
+NSLog(@"%@", arr);
+```
+
+打印结果为
+
+```objc
+(
+    1,
+    2,
+    3,
+    4
+)
+```
+
+但是如果打印自定义的类的时候却是这样的：
+
+```
+<Person: 0x608000001530>
+```
+
+上面这种内容不太有用，所以我们应该在自己的类中覆写 description 方法：
+
+```objc
+#import "Person.h"
+
+@implementation Person
+
+
+- (NSString *)description
+{
+    return [NSString stringWithFormat:@"<%@ : %p>, name = \"%@\" age = %lu", self.class, self, self.name, self.age];
+}
+
+@end
+```
+
+创建并打印自定义类：
+
+```objc
+Person *p = [[Person alloc] init];
+p.name = @"mayan";
+p.age = 26;
+    
+NSLog(@"%@", p);
+```
+
+打印结果如下
+
+```objc
+<Person : 0x600000025560>, name = "mayan" age = 26
+```
+
+以前还需要覆写 `debugDescription` 方法才能在断点时自定义打印，现在仅仅设置好 `description` 就可以了
+
+90页
