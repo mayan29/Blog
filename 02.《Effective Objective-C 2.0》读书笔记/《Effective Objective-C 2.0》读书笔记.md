@@ -487,9 +487,8 @@ void fly(id self, SEL _cmd) {
 接收者在每一步均有机会处理消息，步骤越往后，处理消息的代价就越大，最好能在第一步就处理完，这样的话，运行时就可以将此方法缓存取来了。若想在第三步里把消息转给备援的接收者，那还不如把转发操作提前到第二步。因为第三步只是修改了调用目标，这项改动放在第二步执行会更为简单，不然的话，还得创建并处理完整的 NSInvocation
 
 
-## 11. 接口与 API 设计
 
-### 11.1 自定义初始化方法
+## 11. 自定义初始化方法
 
 ```objc
 #import "Person.h"
@@ -514,7 +513,8 @@ void fly(id self, SEL _cmd) {
 @end
 ```
 
-### 11.2 实现 description 方法
+
+## 12. 实现 description 方法
 
 调试程序时，经常需要打印并查看对象信息，比如打印数组信息：
 
@@ -574,4 +574,100 @@ NSLog(@"%@", p);
 
 以前还需要覆写 `debugDescription` 方法才能在断点时自定义打印，现在仅仅设置好 `description` 就可以了
 
-90页
+
+## 13. 理解 NSCopying 协议
+
+对象的拷贝通常使用 `copy` 方法完成，如果想令自己的类支持拷贝操作，那么就要实现 NSCopying 协议
+
+```objc
+- (id)copyWithZone:(NSZone *)zone;
+```
+
+为何会出现 NSZone 呢？因为以前开发中，会据此把内存分为不同的`区`（zone），而对象会创建在某个区里面。现在不用了，每个程序只有一个`默认区`（default zone），所以实现这个方法，不必担心 zone 参数。
+
+```objc
+#import "Person.h"
+
+@interface Person () <NSCopying>
+
+@end
+
+@implementation Person
+
+
+- (instancetype)initWithName:(NSString *)name andAge:(NSInteger)age
+{
+    if (self = [super init]) {
+        _name = [name copy];
+        _age  = age;
+    }
+    return self;
+}
+
+- (id)copyWithZone:(NSZone *)zone
+{
+    return [[[self class] allocWithZone:zone] initWithName:_name andAge:_age];
+}
+
+@end
+```
+
+## 14. 协议、委托、分类
+
+OC 语言有一项特性叫做`协议`（protocol），它与 Java 的`接口`（interface）类似。定义一套接口，某对象若想接受另一个对象的委托，则需遵从此接口，以便成为其`委托对象`（delegate），而这另一个对象则可以给其委托对象回传一些信息，也可以在发生相关事件时通知委托对象。
+
+此模式可将数据和业务逻辑解耦，比方说，用户界面里有个显示数据所用的视图，那么，此视图只应包含显示数据所需的逻辑代码，而不应决定要显示何种数据以及数据之间如何交互问题。视图对象的属性中，可以包含负责数据与事件处理的对象。这两种对象分别称为`数据源`（data source）与`委托`（delegate）
+
+利用`分类`（Category）机制，我们无须继承子类即可直接为当前类添加方法，而在其他语言中，需通过继承子类来实现。由于 OC 运行时是高度动态的，所以才能支持这一特性。
+
+
+## 15. 以自动释放池块降低内存峰值
+
+```objc
+for (int i = 0; i < 100000; i++) {
+
+    [self doSomethingWithInt:i];
+}
+```
+
+如上所示代码，如果 `doSomethingWithInt:` 方法要创建临时对象，那么这些对象很可能放在自动释放池里，比方说，它们可能是一些临时字符串。但是，即使这些对象在调用完方法之后就不再使用，但是它们依然处于存活状态。这样一来，在执行 for 循环时，应用程序所占内存量就会持续上涨，等所有临时对象都释放之后，内存用量又突然下降。
+
+如果把循环内的代码包裹在自动释放池块中，那么在循环中自动释放的对象就会放在这个池，而不是线程的主池里面：
+
+```objc
+for (int i = 0; i < 100000; i++) {
+        
+    @autoreleasepool {
+        [self doSomethingWithInt:i];
+    }
+}
+```
+
+这样，应用程序在执行循环时的内存峰值就会降低，但是是否应该用池来优化效率，完全取决于具体的应用程序。首先得监控内存用量，判断其中有没有需要解决的问题，别着急优化。尽管自动释放池块的开销不大，但是毕竟还是有的，所以尽量不要建立额外的自动释放池。
+
+
+## 16. 理解 block
+
+当前多线程编程的核心就是`块`（block）和`大中枢派发`（Grand Central Dispatch，GCD），block 是一种在 C、C++、OC 中使用的`词法闭包`（lexical closure）
+
+![在类中新增另一个实例变量前后的数据布局图](https://github.com/Mayan29/ReadingNotes/blob/master/02.《Effective%20Objective-C%202.0》读书笔记/DATA/pic02.png)
+
+- 在存放 block 对象的内存区域中，首个变量是 isa，指向 Class 对象的指针；
+- 最重要的就是 invoke 变量，这是个函数指针，指向 block 的实现代码；
+- descriptor 变量是指向结构体的指针，其中声明了 block 对象的总体大小，还声明了 copy 和 dispose 这两个辅助函数所对应的函数指针，辅助函数在拷贝和丢弃 block 对象时运行，其中会执行一些操作，比如，前者要保留捕获的对象，后者将之释放；
+- block 还会把它所捕获的所有变量都拷贝一份，这些拷贝放在 descriptor 变量后面，捕获了多少个变量，就要占据多少内存空间。拷贝的并不是对象本身，而是指向这些对象的指针变量，原因是执行 block 时，要从内存中把这些捕获到的变量读出来。
+
+
+## 17. 多用派发队列，少用同步锁
+
+防止多线程因为执行同一份代码而出问题，通常使用锁来实现某种同步机制。
+
+```objc
+@synchronized(self) {
+    // do something
+}
+```
+
+这种写法的缺点是，滥用同步锁会降低代码效率，因为共用同一个锁的那些同步块，都必须按顺序执行，如果在 self 对象上频繁加锁，那么程序可能要等另一段与此无关的代码执行完毕，才能继续执行当前代码。
+
+166页
