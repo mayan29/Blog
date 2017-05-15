@@ -662,6 +662,8 @@ for (int i = 0; i < 100000; i++) {
 
 防止多线程因为执行同一份代码而出问题，通常使用锁来实现某种同步机制。
 
+### 17.1 普通锁
+
 ```objc
 @synchronized(self) {
     // do something
@@ -670,4 +672,301 @@ for (int i = 0; i < 100000; i++) {
 
 这种写法的缺点是，滥用同步锁会降低代码效率，因为共用同一个锁的那些同步块，都必须按顺序执行，如果在 self 对象上频繁加锁，那么程序可能要等另一段与此无关的代码执行完毕，才能继续执行当前代码。
 
-166页
+另一个办法是直接使用 NSLock 对象：
+
+```objc
+_lock = [[NSLock alloc] init];
+
+[_lock lock];
+// do something
+[_lock unlock];
+```
+
+也可以使用 NSRecursiveLock 这种`递归锁`（recursive lock），线程能够多次持有该锁，而不会出现死锁（deadlock）现象。
+
+这两种方法都很好，但是也有其缺陷，比如在极端情况下，同步块会导致死锁，另外其效率也不高，而如果直接使用锁对象的话，一旦遇到死锁，就会非常麻烦。
+
+### 17.2 GCD 相关锁
+
+有种简单高效的方法可以代替同步块或锁对象，那就是使用`串行同步队列`（serial synchronization queue），将读取操作、写入操作都安排在同一个队列里，即可保证数据同步
+
+```objc
+_queue = dispatch_queue_create("syncQueue", NULL);
+
+- (NSString *)name
+{
+    __block NSString *localName;
+    dispatch_sync(_queue, ^{
+        localName = _name;
+    });
+    return localName;
+}
+
+- (void)setName:(NSString *)name
+{
+    dispatch_sync(_queue, ^{
+        _name = name;
+    });
+}
+```
+
+有个更优的方法是，使用栅栏块来实现属性的设置方法，对属性的读取操作可以并发执行，但是写入操作却必须单独执行了。测试一下性能，发现这种做法比使用串行队列要快。
+
+![在类中新增另一个实例变量前后的数据布局图](https://github.com/Mayan29/ReadingNotes/blob/master/02.《Effective%20Objective-C%202.0》读书笔记/DATA/pic03.png)
+
+```objc
+_queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+
+- (NSString *)name
+{
+    __block NSString *localName;
+    dispatch_sync(_queue, ^{
+        localName = _name;
+    });
+    return localName;
+}
+
+- (void)setName:(NSString *)name
+{
+    dispatch_barrier_async(_queue, ^{
+        _name = name;
+    });
+}
+```
+
+## 18. 多用 GCD，少用 performSelector 方法
+
+performSelector 编程方式极为灵活，经常可以简化复杂的代码，但是如果在 ARC 下编译代码，那么编译器会发出内存泄漏的警告。原因在于，编译器并不知道将要调用的方法名和选择子，所以没有办法运用 ARC  的内存管理规则来判定返回值是不是应该释放，所以 ARC 比较谨慎，就是不添加释放操作，然而这么做可能导致内存泄漏，因为方法在返回对象时可能已经将其保留了。
+
+替代方案就是使用 block，而且 performSelector 系列方法所提供的线程功能，都可以通过在大中枢派发机制中使用 block 来实现，延后执行可以用 dispatch_after，多线程可以使用 dispatch_sync 和 dispatch_async
+
+## 19. GCD 和 NSOperationQueue 使用时机
+
+GCD 并不总是最佳方案，有的时候采用对象所带来的开销微乎其微，使用完整对象所带来的好处反而大大超过其缺点。
+
+#### 取消某个操作
+
+如果使用 NSOperationQueue 取消操作是很容易的。运行任务前，可以在 NSOperation 对象上调用 cancel 方法，该方法会设置对象内的标志位，用以表明此任务不需执行，不过，已经启动的任务无法取消。如果是使用 GCD 队列，那就无法取消了。
+
+#### 指定操作间的依赖关系
+
+一个操作可以依赖其他多个操作，开发者能够指定操作之间的依赖体系，使特定的操作必须在另外一个操作顺利执行完毕后方可执行。
+
+#### 通过键值观察机制监控 NSOperation 对象的属性
+
+NSOperation 对象有许多属性都适合通过 KVO 来监听，比如可以通过 isCancelled 属性来判断任务是否已经取消，又比如可以通过 isFinished 属性来判断任务是否已经完成。
+
+#### 指定操作的优先级
+
+GCD 的队列确实有优先级，不过那是针对整个队列来说的，而不是针对每个块来说的。因此，在优先级这一点上，NSOperationQueue 所提供的功能要比 GCD 更为便利
+
+
+## 20. Dispatch Group 的使用
+
+如果想令数组中的每个对象都执行某项任务，并且想等待所有任务执行完毕，那么就可以使用 GCD 特性来实现
+
+```objc
+dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+dispatch_group_t group = dispatch_group_create();
+    
+for (id object in cellArray) {
+    dispatch_group_async(group, queue, ^{
+        // do something
+    });
+}
+    
+dispatch_group_wait(group, DISPATCH_TIME_FOREVER); 
+
+// continue do something
+```
+
+如果当前线程不应阻塞，可用 notify 函数来取代 wait
+
+```objc
+dispatch_queue_t mainQueue = dispatch_get_main_queue();
+dispatch_group_notify(group, mainQueue, ^{
+   // continue do something
+});
+```
+
+在前面的范例代码中，我们遍历某个数组，并在其每个元素上执行任务，这也可以用另外一个 GCD 函数来实现：
+
+```objc
+dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+   
+dispatch_apply(cellArray.count, queue, ^(size_t i) {
+    id object = cellArray[i];
+    // do something
+});
+```
+
+这个例子表明，未必总要使用 dispatch_group，然而 dispatch_apply 会持续阻塞，直到所有任务都执行完毕为止。
+
+## 21. 不要使用 dispatch\_get\_current\_queue
+
+使用 GCD 时，经常需要判断当前代码正在哪个队列上执行，我们会想到下面这个函数：
+
+```objc
+dispatch_queue_t queue = dispatch_get_current_queue();
+```
+
+然而这个方法从 iOS 6.0 就已经弃用了，因为用它检测当前队列是不是某个特定的队列，以此来避免执行同步派发时，可能遭遇死锁问题。
+
+```objc
+- (NSString *)name
+{
+    __block NSString *name;
+    dispatch_sync(_queue, ^{
+        name = _name;
+    });
+    return name;
+}
+
+- (void)setName:(NSString *)name
+{
+    dispatch_async(_queue, ^{
+        _name = name;
+    });
+}
+```
+
+这种写法的问题在于，get 方法可能会死锁，假如调用 get 方法的队列恰好是 _queue，那么 dispatch_sync 就一直不会返回，直到 block 执行完毕为止。可是，应该执行 block 的那个目标队列确是当前队列，而当前队列的 dispatch_sync 又一直堵塞着，它在等待目标队列把这个 block 执行完，这样一来，block 就永远没有机会执行了。
+
+```objc
+dispatch_queue_t queueA = dispatch_queue_create("queueA", NULL);
+dispatch_queue_t queueB = dispatch_queue_create("queueB", NULL);
+    
+dispatch_sync(queueA, ^{
+    dispatch_sync(queueB, ^{
+        dispatch_sync(queueA, ^{
+            // do something
+        });
+    });
+});
+```
+
+上面这段代码执行到最内层的派发操作时，总会死锁。因为此操作是针对 queueA 队列的，所以必须等最外层的 dispatch_sync 执行完毕才行，而最外层的 dispatch_sync 要等最内层的 dispatch_sync 执行完，于是就死锁了。将上面方法进行修改：
+
+```objc
+dispatch_queue_t queueA = dispatch_queue_create("queueA", NULL);
+dispatch_queue_t queueB = dispatch_queue_create("queueB", NULL);
+    
+dispatch_sync(queueA, ^{
+    dispatch_sync(queueB, ^{
+        if (dispatch_get_current_queue() == queueA) {
+            // do something
+        } else {
+            dispatch_sync(queueA, ^{
+               // do something
+            });
+        }
+    });
+});
+```
+
+然而这样做依然死锁，因为 dispatch_get_current_queue 返回的是当前队列，也就是 queueB，这样针对 queueA 的同步派发操作依然会执行，于是还是死锁了。
+
+要解决这个问题，最好的办法就是通过 GCD 提供的功能来设定`队列特有数据`（queue-specific data），可以把任意数据以键值对的形式关联到队列里。最重要之处在于，假如根据指定的 key 获取不到关联数据，系统就会沿着层级体系向上查找，直至找到数据或者到达根队列为止。
+
+```objc
+dispatch_queue_t queueA = dispatch_queue_create("bifangao.queueA", NULL);
+dispatch_queue_t queueB = dispatch_queue_create("bifangao.queueB", NULL);
+dispatch_set_target_queue(queueB, queueA);
+
+static int kQueueSpecific;
+CFStringRef queueSpecificValue = CFSTR("queueA");
+dispatch_queue_set_specific(queueA, &kQueueSpecific, (void*)queueSpecificValue, (dispatch_function_t)CFRelease);  
+
+dispatch_sync(queueB, ^{
+
+    CFStringRef retrievedValue = dispatch_get_specific(&kQueueSpecific);
+    if (retrievedValue) {
+        // do something
+    }else{
+        dispatch_sync(queueA, ^{
+            // do something
+        });
+    }
+});
+```
+
+关于下面方法的解释：
+
+```objc
+dispatch_queue_set_specific(queueA, &kQueueSpecific, (void*)queueSpecificValue, (dispatch_function_t)CFRelease);  
+```
+
+这个函数首个参数表示待设置数据的队列，其后两个参数是键与值，键与值都是不透明的 void 指针。对于键来说，需要注意的是，函数是按指针值来比较键的，而不是按照其内容。值可以在其存放任意数据，上面代码使用 CoreFoundation 字符串作为值，因为 ARC 并不会自动管理对象的内存，所以这种对象非常适合充当队列特定数据，它们可以根据需要与相关的 OC Foundation 类无缝衔接。最后一个参数是`析构参数`（destructor function），当队列所占内存为系统所回收，或者有新的值与键相关联时，原有的值对象就会移除，而析构函数也会于此时运行。代码中采用 CFRelease 做析构函数，此函数符合要求，不过也可以采用自定义的函数，在其中调动 CFRelease 清理旧值，并完成其他必要的清理工作。
+
+
+## 22. Foundation 和 CoreFoundation 无缝桥接
+
+### 22.1 三种桥接
+
+#### __bridge
+
+ARC 仍然具备这个 OC 对象的所有权
+
+#### __bridge\_retained
+
+与 __bridge 相反，意味着 ARC 将交出对象的所有权，用完需要 CFRelease 手动释放内存
+
+#### __bridge\_transfer
+
+CoreFoundation 反向转换 Foundation 类，令 ARC 获得对象所有权
+
+### 22.2 分析 CFMutableDictionary
+
+```objc
+CFMutableDictionaryRef CFDictionaryCreateMutable (
+	CFAllocatorRef allocator,
+	CFIndex capacity,
+	const CFDictionaryKeyCallBacks *keyCallBacks,
+	const CFDictionaryValueCallBacks *valueCallBacks
+)
+```
+
+首个参数表示将要使用的`内存分配器`（allocator）,CoreFoundation 对象里的数据结构需要占用内存，而分配器负责分配及回收这些内存。通常传入 NULL，表示采用默认的分配器。
+
+第二个参数定义了字典的初始大小。并不会限制字典的最大容量，只是向分配器提示了一开始应该分配多少内存。假如要创建的字典含有 10 个对象，那就向该参数传入 10
+
+最后两个参数值定义了许多回调函数，用于指示字典中的 key 和 value 在遇到各种事件时应该执行何种操作，二者对应的结构体如下：
+
+```objc
+struct CFDictionaryKeyCallBacks (
+	CFIndex version;
+	CFDictionaryRetainCallBack retain;
+	CFDictionaryReleaseCallBack release;
+	CFDictionaryCopyDescriptionCallBack copyDescription;
+	CFDictionaryEqualCallBack equal;
+	CFDictionaryHashCallBack hash;
+);
+```
+
+```objc
+struct CFDictionaryValueCallBacks (
+	CFIndex version;
+	CFDictionaryRetainCallBack retain;
+	CFDictionaryReleaseCallBack release;
+	CFDictionaryCopyDescriptionCallBack copyDescription;
+	CFDictionaryEqualCallBack equal;
+);
+```
+
+version 参数用于检测新版与旧版数据结构之间是否兼容，目前应设为 0。结构体中其他成员都是函数指针，它们定义了当各种事件发生时应该采用哪个函数来执行相关任务。比如字典中加入新的 key 和 value，那么就会调用 retain 函数
+
+
+## 23. 构建缓存时选用 NSCache 而非 NSDictionary
+
+NSCache 胜过 NSDictionary 之处在于：
+
+1. 当系统资源将要耗尽时，它可以自动删减缓存，如果采用字典，需要自己实现在系统低内存时发送通知删除缓存；
+2. NSCache 还会先行删减最久未使用的对象，如果使用  NSDictionary 自己实现，会十分复杂；
+3. NSCache 并不会拷贝键，而是会保留它，用 NSDictionary 实现的话需要相当复杂的代码。NSCache 对象不拷贝键的原因是：键是由不支持拷贝的对象来充当的；
+4. NSCache 是线程安全的，而 NSDictionary 不具备此优势。
+
+下面这段代码演示了缓存的用法：
+
+```objc
+
+198页
