@@ -968,5 +968,47 @@ NSCache 胜过 NSDictionary 之处在于：
 下面这段代码演示了缓存的用法：
 
 ```objc
+#import "MYNetworkFetcher.h"
 
-198页
+@implementation MYNetworkFetcher {
+    NSCache *_cache;
+}
+
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        _cache = [NSCache new];
+        _cache.countLimit = 100;  // Cache a maximum of 100 URLs
+        _cache.totalCostLimit = 5 * 1024 * 1024;
+    }
+    return self;
+}
+
+- (void)downloadDataForURL:(NSURL *)url
+{
+    // NSPurgeableData 是 NSMutableData 的子类，当系统资源紧张时，可以把保存
+    NSPurgeableData *cachedData = [_cache objectForKey:url];
+    if (cachedData) {
+        [cachedData beginContentAccess];
+        [self useData:cachedData];
+        [cachedData endContentAccess];
+    } else {
+        MYNetworkFetcher *fetcher = [[MYNetworkFetcher alloc] initWithURL:url];
+        [fetcher startWithCompletionHandler:^(NSData *data) {
+            
+            NSPurgeableData *purgeableData = [NSPurgeableData dataWithData:data];
+            [_cache setObject:purgeableData forKey:url cost:purgeableData.length];
+            // 创建好 NSPurgeableData 对象之后，purge 引用计数会多 1，所以无需再调用 beginContentAccess，然后其后必须调用 endContentAccess 将多出来的这个 1 抵消掉
+            [self useData:data];
+            [purgeableData endContentAccess];
+        }];
+    }
+}
+
+@end
+```
+
+## 后记
+
+> 去年阅读了一少半，然后因为项目耽搁了，而且笔记没有记得很清楚，所以这次又从头开始看。这本书还是很经典的，介绍了很多细节性的问题，理论性也很强，没有浪费这么长时间。
