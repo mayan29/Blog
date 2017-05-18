@@ -4,86 +4,129 @@
 ![封面](https://github.com/Mayan29/ReadingNotes/blob/master/03.《Objective-C%20高级编程：iOS%20与%20OS%20X%20多线程和内存管理》读书笔记/DATA/pic00.png)
 
 
-## 1. alloc / retain / release / dealloc 实现
+## 1. 对象创建与释放的内部实现
+
+### 1.1 alloc
+
+在 NSObject 类的 alloc 类方法上设置断点，追踪程序的执行，以下列出了执行所调用的方法和函数：
 
 ```objc
-id obj = [NSObject alloc];
++ alloc
++ allocWithZone:
+class_createInstance
+calloc
 ```
 
-上面调用 NSOjbect 类的 alloc 类方法在 NSObject.m 源代码中的实现如下：
+alloc 类方法首先调用 allocWithZone: 类方法，然后调用 class_createInstance 函数，最后通过调用 calloc 来分配内存块。class_createInstance 函数的源代码可以通过 [objc4 库](https://opensource.apple.com/source/objc4/objc4-709/runtime/)中的 runtime/objc-runtime-new.mm 进行确认
+
+### 1.2 retainCount / retain / release
+
+retainCount / retain / release 分别调用的方法和函数：
 
 ```objc
-+ (instancetype)alloc
-{
-	return [self allocWithZone: NSDefaultMallocZone()];
-}
-
-+ (instancetype)allocWithZone:(NSZone *)z
-{
-	return NSAllocateObject(self, 0, z);
-}
+- retainCount
+__CFDoExternRefOperation
+CFBasicHashGetCountOfKey
 ```
 
-通过 allocWithZone: 类方法调用 NSAllocateObject 函数分配了对象。下面我们来看看 NSAllocateObject 函数：
-
 ```objc
-struct obj_layout {
-	NSUInteger retained;
-};
-
-inline id
-NSAllocateObject(Class aClass, NSUInteger extraBytes, NSZone *zone) {
-	int size = 计算容纳对象所需内存大小；
-	id new = NSZoneMalloc(zone, size);
-	memset(new, 0, size);
-	new = (id) & ((struct obj_layout *)new)[1];
-}
+- retain
+__CFDoExternRefOperation
+CFBasicHashAddValue
 ```
 
-NSAllocateObject 函数通过调用 NSZoneMalloc 函数来分配存放对象所需的内存空间，之后将该内存空间置 0，最后返回作为对象使用的指针。
-
-NSDefaultMallocZone、NSZoneMalloc 等名称中包含的 NSZone 是什么呢？它是为防止内存碎片化而引入的结构。对内存分配的区域本身进行多重化管理，根据使用对象的目的、对象的大小分配内存，从而提高了内存管理的效率。
-
-但是，现在的 runtime 只是简单的忽略了区域的概念，runtime 中的内存管理本身已极具效率，使用区域来管理内存反而会引起内存使用效率低下以及源代码复杂化等问题
-
-![内存碎片化](https://github.com/Mayan29/ReadingNotes/blob/master/03.《Objective-C%20高级编程：iOS%20与%20OS%20X%20多线程和内存管理》读书笔记/DATA/pic01.png)
-
-以下是去掉 NSZone 后简化了的源代码：
-
 ```objc
-struct obj_layout {
-	NSUInteger retained;
-};
-
-+ (instancetype)alloc
-{
-	int size = sizeof(struct obj_layout) + 对象大小；
-	struct obj_layout *p = (struct obj_layout *)calloc(1, size);
-	return (id)(p + 1);
-}
+- release
+__CFDoExternRefOperation
+CFBasicHashRemoveValue
+（CFBasicHashRemoveValue 返回 0 时，- release 调用 dealloc）
 ```
 
-alloc 类方法用 struct obj_layout 中的 retained 整数来保存引用计数，并将其写入对象内存头部，该对象内存块全部置 0 后返回
-
-![alloc 返回对象的内存图](https://github.com/Mayan29/ReadingNotes/blob/master/03.《Objective-C%20高级编程：iOS%20与%20OS%20X%20多线程和内存管理》读书笔记/DATA/pic02.png)
-
-获取对象的引用计数 `[obj retainCount]` 内部实现：
+各个方法都调用了 CFRuntime.c 的 __CFDoExternRefOperation 函数，下面是简化后的源代码：
 
 ```objc
-- (NSUInteger)retainCount
-{
-	return NSExtraRefCount(self) + 1;
-}
-
-inline NSUInteger
-NSExtraRefCount(id anObject)
-{
-	return ((struct obj_layout *)anObject)[-1].retained;
+int __CFDoExternRefOperation(uintptr_t op, id obj) {
+	CFBasicHashRef table = 取得对象对应的散列表（obj）;
+	int count;
+	
+	switch(op) (
+	case OPERATION_retainCount:
+		count = CFBasicHashGetCountOfKey(table, obj);
+		return count;
+	case OPERATION_retain:
+		CFBasicHashAddValue(table, obj);
+		return obj;
+	case OPERATION_release:
+		count = CFBasicHashRemoveValue(table, obj);
+		return 0 == count;
+	)
 }
 ```
 
-由对象寻址找到对象内存头部，从而访问其中的 retained 变量
+苹果的实现就是采用散列表（引用计数表）来管理引用计数：
 
-![通过对象访问对象内存头部](https://github.com/Mayan29/ReadingNotes/blob/master/03.《Objective-C%20高级编程：iOS%20与%20OS%20X%20多线程和内存管理》读书笔记/DATA/pic03.png)
+![通过散列表管理引用计数](https://github.com/Mayan29/ReadingNotes/blob/master/03.《Objective-C%20高级编程：iOS%20与%20OS%20X%20多线程和内存管理》读书笔记/DATA/pic01.png)
 
-因为分配时全部置 0，所以 retained 为 0，由 NSExtraRefCount(self) + 1 得出，retainCount 为 1，可以推测出，retain 方法使 retained 变量加 1，而 release 方法使 retained 变量减 1
+GNUstep 将引用计数保存在对象占用内存块头部的变量中，而苹果则是保存在引用计数表的记录中。GNUstep 的实现看起来既简单又高效，但是苹果如此实现必然有它的好处：
+
+通过内存块头部管理引用计数的好处：
+
+- 少量代码即可完成；
+- 能够统一管理引用计数用内存块与对象用内存块。
+
+通过引用计数表管理引用计数的好处：
+
+- 对象用内存块的分配无需考虑内存块头部；
+- 引用计数表各记录中存有内存块地址，可以各个记录追溯到各对象的内存块。
+
+第二条这一特性在调试时有着重要的作用：即使出现故障导致对象占用的内存块损坏，但只要引用计数表没有被破坏，就能够确认各内存块的位置。下面是通过引用计数表追溯对象：
+
+![通过引用计数表追溯对象](https://github.com/Mayan29/ReadingNotes/blob/master/03.《Objective-C%20高级编程：iOS%20与%20OS%20X%20多线程和内存管理》读书笔记/DATA/pic02.png)
+
+另外，在利用工具检测内存泄漏时，引用计数表的各记录也有助于检测各对象的持有者是否存在。
+
+### 1.3 autorelease
+
+顾名思义，autorelease 就是自动释放，它类似于 C 语言中自动变量
+的特性。
+
+自动变量：程序执行时，若某自动变量超出其作用域，该自动变量将被自动废弃：
+
+```objc
+{
+	int a;
+}
+```
+
+上面这段代码，因为超出变量作用域，自动变量 `int a` 被废弃，不可再访问。
+
+autorelease 的具体使用方法如下：
+
+1. 生成并持有 NSAutoreleasePool 对象；
+2. 调用已分配对象的 autorelease 实例方法；
+3. 废弃 NSAutoreleasePool 对象。
+
+一般情况下，我们不会使用 NSAutoreleasePool 对象来进行开发工作，但是在大量产生 autorelease 的对象时，只要不废弃 NSAutoreleasePool 对象，那么生成的对象就不能被释放，导致内存不足。
+
+典型的例子就是，读入大量图像的同时改变其尺寸。图像文件读入到 NSData 对象，并从中生成 UIImage 对象，改变该对象尺寸后生成新的 UIImage 对象，产生大量 autorelease 对象。
+
+解决办法是，在适当的地方生成、持有或废弃 NSAutoreleasePool 对象：
+
+```objc
+for (int i = 0; i < 图像数; i++) {
+	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+	
+	// 读入图像，产生大量 autorelease 对象
+	
+	[pool drain];  // autorelease 对象被一起 release
+}
+```
+
+但是我们在 ARC 需要使用 @autoreleasepool 块替代 NSAutoreleasePool
+
+autorelease 的内部就是调用 NSAutoreleasePool 方法实现的。
+
+
+## 2. ARC 的内部实现
+
+65页
