@@ -1,6 +1,10 @@
 # 《Effective Objective-C 2.0》读书笔记
 
 
+![封面](https://github.com/Mayan29/ReadingNotes/blob/master/02.《Effective%20Objective-C%202.0》读书笔记/DATA/pic00.png)
+
+
+
 ## 1. 了解 Objective-C
 
 OC 使用`消息结构`（messaging structure）而不是`函数调用`（function calling），区别如下：

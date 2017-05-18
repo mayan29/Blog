@@ -1,6 +1,7 @@
 # 《iOS 开发进阶（唐巧）》读书笔记
 
 
+![封面](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic00.png)
 
 
 ## 1. CocoaPods 的安装和使用
