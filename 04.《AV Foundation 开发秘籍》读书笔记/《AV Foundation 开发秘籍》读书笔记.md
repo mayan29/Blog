@@ -6,7 +6,7 @@
 
 AV Foundation 是处理基于时间的视听数据的高级框架。其处于 AVKit 和 Core Audio / Core Media / Core Animation 框架之间。 
 
-![AV Foundation for iOS](/Users/may-g/Desktop/frameworksBlockDiagram_2x.png)
+![AV Foundation for iOS](https://github.com/Mayan29/ReadingNotes/blob/master/04.《AV%20Foundation%20开发秘籍》读书笔记/DATA/pic00.png)
 
 > #### Core Audio
 > Core Audio 由多个框架整合在一起的总称，为音频和 MIDI 内容的录制、播放和处理提供相应接口。Core Audio 也提供高层级的接口，比如通过 Audio Queue Services 框架，处理基本的音频播放和录音功能。同时也提供相对低层级的接口，尤其是 Audio Units 接口，提供了针对音频信号进行完全控制的功能，并通过 Audio Units 构建一些复杂的音频处理模式。如果想详细了解这一框架，建议阅读由 Chirs Adamson 和 Kevin Avila 撰写的 Learning Core Audio 一书。
@@ -26,27 +26,27 @@ AV Foundation 是处理基于时间的视听数据的高级框架。其处于 AV
 
 AV Foundation 框架包含 100 多个类，如果将其按照功能单元进行分解，就会变得比较容易理解：
 
-#### 音频播放记录
+#### 1.2.1 音频播放记录
 
 上图中，AV Foundation 方框右上角有一个小方格被单独标记为音频专用类，这是由 AV Foundation 提供的关于音频处理的一些早期功能。AVAudioPlayer 和 AVAudioRecorder 可以提供一种更简单的整合音频播放和记录的功能，但是并不是 AV Foundation 用于播放和记录音频的唯一方式，却是最容易学习、功能最强大的方法。
 
-#### 媒体文件检查
+#### 1.2.2 媒体文件检查
 
 AV Foundation 提供检查正在使用的媒体文件的功能，比如是否可以用于回放或者是否可以被编辑和导出，还可以获取内容持续时间，创建日期，首选播放音量。此外，该框架还基于 AVMetadataItem 类提供强大的元数据支持，允许开发者读写关于媒体资源的描述信息，比如唱片簿和艺术家信息。
 
-#### 视频播放
+#### 1.2.3 视频播放
 
 这是 AV Foundation 提供的最常用的功能，这一部分的核心类是 AVPlayer 和 AVPlayerItem。
 
-#### 媒体捕捉
+#### 1.2.4 媒体捕捉
 
 AV Foundation 提供了丰富的 API 集可以对摄像头等设备进行精密控制。摄像头捕捉的核心类是 AVCaptureSession，其作为所有活动的汇集点来接收摄像头设备由各路流发过来的视频和图片。
 
-#### 媒体编辑
+#### 1.2.5 媒体编辑
 
 AV Foundation 可以将多个音频和视频资源进行组合，允许修改和编辑独立的媒体片段、随时修改音频文件的参数以及添加动画标题和场景切换效果。
 
-#### 媒体处理
+#### 1.2.6 媒体处理
 
 使用 AVAssetReader 和 AVAssetWritere 类来执行更高级的媒体处理任务，这些类可以直接访问视频帧和音频样本。
 
