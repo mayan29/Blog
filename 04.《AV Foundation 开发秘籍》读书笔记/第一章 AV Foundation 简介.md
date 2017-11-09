@@ -80,7 +80,7 @@ YUV 主流的采样方式有三种：4:4:4、4:2:2、4:2:0，这些值就是设�
 - 每四个 Y 共用一组 UV 分量
 - 这里的 0 意思是 U、V 分量隔行采样一次，比如第一行采样 4:2:0，第二行采样 4:0:2，以此类推。
 
-![pic02](https://github.com/Mayan29/ReadingNotes/blob/master/04.《AV%20Foundation%20开发秘籍》读书笔记/DATA/pic02.png) 
+![pic02](https://github.com/Mayan29/ReadingNotes/blob/master/04.《AV%20Foundation%20开发秘籍》读书笔记/DATA/pic02.jpg) 
 
 ### 3.3 数字媒体压缩 - 编解码器压缩
 
