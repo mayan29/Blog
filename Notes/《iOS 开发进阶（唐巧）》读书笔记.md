@@ -263,7 +263,11 @@ Appledoc 是一个从源代码中抽取文档的工具
 
 ## 四、理解内存管理
 
-### 4.1 我们为什么需要引用计数
+### 1. 什么是引用计数？
+
+引用计数可以有效地管理对象的生命周期。当我们创建一个新对象的时候，它的引用计数为 1，当有一个新的指针指向这个对象时，我们将其引用计数加 1，当某个指针不再指向这个对象时，我们将其引用计数减 1，当对象的引用计数变为 0 时，说明这个对象不再被任何指针指向了，这个时候我们就可以将对象销毁，回收内存。
+
+### 2. 我们为什么需要引用计数
 
 假如对象 A 将其中的对象 M 作为参数传递给对象 B，没有引用计数的情况下，内存管理原则是“谁申请谁释放”。那么要在 B 不再需要 M 的时候，A 将 M 销毁。但 B 可能只是临时用一下 M，也可能觉得 M 很重要，将它设置成自己的一个成员变量。这种情况下，什么时候销毁 M 就成了一个难题。
 
@@ -273,7 +277,7 @@ Appledoc 是一个从源代码中抽取文档的工具
 
 所以引用计数很好的解决了这个问题，哪些对象需要长时间使用，就把它的引用计数加1，使用完了再把引用计数减1，对象的生命期管理可以完全交给引用计数了。
 
-### 4.2 不要向已经释放的对象发送消息
+### 3. 不要向已经释放的对象发送消息
 
 ```objc
 NSObject *obj = [[NSObject alloc] init];
@@ -293,28 +297,11 @@ Reference Count = 1
 
 那为什么在这个对象被回收之后，这个不确定的值是 1 而不是 0 呢？因为当最后一次执行 release 时，系统知道马上就要回收内存了，就没有必要将 retainCount 减 1 了，因为不管减不减 1，该对象都肯定被回收，而对象被回收后，它所有的内存区域，包括 retainCount 值也变得没有意义。这样减少一次内存的操作，加速对象的回收。
 
-### 4.3 弱引用
+### 4. 弱引用
 
 弱引用持有对象，但是不增加引用计数，这样就避免了循环引用的产生
 
-### 4.4 使用 Leaks 检测循环引用
-
-```objc
-- (void)viewDidLoad {
-    [super viewDidLoad];
-
-    
-    NSMutableArray *firstArray = [NSMutableArray array];
-    NSMutableArray *secondArray = [NSMutableArray array];
-
-    [firstArray addObject:secondArray];
-    [secondArray addObject:firstArray];
-}
-```
-
-我们可以切换打印模块上的 Leaks 切换为 Cycles & Roots 可能看到以图形方式显示出来的循环引用
-
-### 4.5 Core Foundation 对象的内存管理
+### 5. Core Foundation 对象的内存管理
 
 ```objc
 CFStringRef str = CFStringCreateWithCString(kCFAllocatorDefault, "hello world", kCFStringEncodingUTF8);
@@ -325,15 +312,39 @@ CFRelease(str);  // 引用计数 -1
 
 CFRetain 和 CFRelease 方法与 Objective-C 对象的 retain 和 release 方法等价。
 
-将 Core Foundation 对象转换成一个 Objective-C 对象，引入了 bridge 相关关键字
+将 Core Foundation 对象转换成一个 Objective-C 对象，引入了 bridge 相关关键字：
 
-- __bridge：只做类型转换，不修改相关对象的引用计数，原来的 Core Foundation 对象在不用时，需要调用 CFRelease 方法
-- __bridge_retained：类型转换后，将相关对象的引用计数加 1，原来的 Core Foundation 对象在不用时，需要调用 CFRelease 方法
-- __bridge_transfer：类型转换后，将该对象的引用计数交给 ARC 管理，Core Foundation 对象在不用时，不再需要调用 CFRelease 方法
+- `__bridge`：只做类型转换，不修改相关对象的引用计数，原来的 Core Foundation 对象在不用时，需要调用 CFRelease 方法
+- `__bridge_retained`：类型转换后，将相关对象的引用计数加 1，原来的 Core Foundation 对象在不用时，需要调用 CFRelease 方法
+- `__bridge_transfer`：类型转换后，将该对象的引用计数交给 ARC 管理，Core Foundation 对象在不用时，不再需要调用 CFRelease 方法
+
+
+## 五、GCD
+
+### 1. 线程组
+
+```objc
+dispatch_group_t group = dispatch_group_create();
+    dispatch_group_async(group, dispatch_get_global_queue(0, 0), ^{
+        NSLog(@"任务一完成");
+    });
+    dispatch_group_async(group, dispatch_get_global_queue(0, 0), ^{
+        sleep(5);
+        NSLog(@"任务二完成");
+    });
+    dispatch_group_notify(group, dispatch_get_global_queue(0, 0), ^{
+        NSLog(@"任务全部完成");
+    });
+    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+        dispatch_group_wait(group, dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC));
+        NSLog(@"dispatch_group_wait 结束");
+    });
+    ```
 
 
 
-## 5. 动态下载系统提供的多种中文字体
+
+## 五、动态下载系统提供的多种中文字体
 
 字体文件通常比较大，10 ~ 20 MB 是常见的字体库的大小，并且中文字体通常都是有版权的，所以使用特殊中文字体库的 iOS 应用较少，通常只有阅读类的应用才会使用特殊中文字体库。从 iOS 6 开始，苹果支持动态下载中文字体到系统中，使用系统提供的中文字体，既可以避免版权问题，又可以减少应用体积。
 
