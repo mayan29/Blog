@@ -1,12 +1,10 @@
 # 《iOS 开发进阶（唐巧）》读书笔记
 
-
 ![封面](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image01.jpg)
 
+## 一、CocoaPods 的安装和使用
 
-## 1. CocoaPods 的安装和使用
-
-### 简介
+### 1. 简介
 
 每种语言发展到一定阶段，都会出现相应的依赖管理工具，例如 Java 的 Maven、Node.js 的 npm 等。CocoaPods 是开发 iOS 应用程序的一个第三方库的依赖管理工具，起始于 2011 年 8 月，用 Ruby 写的。在没有使用 CocoaPods 以前，我们需要:
 
@@ -16,7 +14,7 @@
 
 这些体力活虽然简单，但毫无技术含量并且浪费时间。在使用 CocoaPods 之后，就会自动将这些第三方开源库的源码下载下来，并且为我的工程设置好相应的系统依赖和编译参数。
 
-### 原理
+### 2. 原理
 
 CocoaPods 的原理是将所有的依赖库都放到另一个名为 Pods 的项目中，然后让主项目依赖 Pods 项目。下面是一些技术细节：
 
@@ -24,7 +22,7 @@ CocoaPods 的原理是将所有的依赖库都放到另一个名为 Pods 的项�
 2. 对于资源文件，CocoaPods 提供了一个名为 Pods-resources.sh 的 bash 脚本，该脚本每次项目编译时都会执行，将第三方库的各种资源文件复制到目标目录中
 3. CocoaPods 通过一个名为 Pods.xcconfig 的文件在编译时设置所有的依赖和参数 
 
-### 安装
+### 3. 安装
 
 Mac 自带 ruby，如果 ruby 的开发工具包 gem 太老，首先升级 gem
 
@@ -68,7 +66,7 @@ $ sudo gem install cocoapods
 $ pod setup
 ```
 
-### 使用
+### 4. 使用
 
 在项目文件夹中创建名为 Podfile 的文件
 
@@ -105,7 +103,7 @@ $ pod install
 - 执行 pod install 之后，会生成一个名为 Podfile.lock 的文件，不能把这个文件加入到 gitignore 中，因为 Podfile.lock 会锁定当前各依赖库的版本，之后执行 pod install 也不会更改版本，只有执行 pod update 才会改变 Podfile.lock。这样可以防止第三方库升级时造成大家各自的第三方库版本不一致。
  
 
-### 其他
+### 5. 其他
 
 #### 为自己的项目创建 podspec 文件
 
@@ -142,9 +140,11 @@ $ brew install appledoc
 ```
 
 
-## 2. 网络封包分析工具 Charles
+## 二、网络封包分析工具 Charles
 
-### 2.1 功能简介
+![Charles](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image02.png)
+
+### 1. 功能简介
 
 - 支持 SSL 代理
 - 支持流量控制，可以模拟慢速网络、等待时间较长的请求
@@ -153,9 +153,9 @@ $ brew install appledoc
 - 支持重发网络请求，方便后端调试
 - 支持修改网络请求参数
 - 支持网络请求的截获和动态修改
-- 检查 H5 内容是否符合 W3C 标准
+- 检查 HTML、CSS、RSS 内容是否符合 W3C 标准（http://validator.w3.org）
 
-### 2.2 Charles 的安装和使用
+### 2. 安装和使用
 
 #### 安装 Charles
 
@@ -173,7 +173,7 @@ Charles 是通过将自己设置成代理服务器来完成封包截取的，将
 
 - 在主界面的中部的 Filter 栏中填入需要过滤出来的关键字，比如 baidu。这种方法是临时性的封包过滤。
 
-- Proxy -> Recording Settings -> Include，这种方法是经常性的封包过滤。
+- Proxy -> Recording Settings -> Include，选择添加一个项目，然后填入需要监控的协议、主机地址、端口号。这种方法是经常性的封包过滤。
 
 #### 截取 iPhone 上的网络封包
 
@@ -189,7 +189,7 @@ Proxy -> Throttle Setting 勾选 Enable Throttling 并且可以设置 Throttle P
 
 #### 修改网络请求内容
 
-调试接口时，我们需要反复尝试不同参数的网络请求，在请求上点击右键，选择 Edit 即可创建一个可编辑的网络请求，可修改 URL 地址、端口、参数等，修改完成后单击 Execute 即可发送
+调试接口时，我们需要反复尝试不同参数的网络请求，在网络请求上点击右键，选择 Edit 即可创建一个可编辑的网络请求，可修改 URL 地址、端口、参数等，修改完成后单击 Execute 即可发送
 
 #### 修改服务器返回内容
 
@@ -212,56 +212,56 @@ Map 功能分为两种，进入方式 Tools -> Map Remote 或 Map Local
 
 #### Rewrite 功能
 
-Rewrite 功能适合对某一类网络请求进行一些正则替换，以达到修改结果的目的。例如，一个 API 请求时获得用户昵称，将 Rewrite Rule 界面的 Match 的 value 设置之前的昵称，Replace 的 value 设置将要修改的昵称
+Rewrite 功能适合对某一类网络请求进行一些替换，以达到修改结果的目的。例如，一个 API 请求时获得用户昵称，将 Rewrite Rule 界面的 Match 的 value 设置之前的昵称，Replace 的 value 设置将要修改的昵称
 
 #### Breakpoints 功能
 
 Rewrite 功能适合做批量和长期的替换，临时性的修改最好使用 Breakpoints 功能。Breakpoints 功能类似 Xcode 中设置的断点，当网络请求发生时，Charles 会截取该请求，这个时候，我们可以在 Charles 中临时修改网络请求的返回内容。修改完成后单击 Execute 即可让网络请求继续进行。需要注意的是，使用 Breakpoints 功能将网络请求截取并修改的过程中，整个网络请求的计时并不会暂停，所以长时间的暂停可能导致客户端的请求超时。
 
 
-
-## 3. 其他一些实用的工具
-
-
-### 3.1 界面调试工具 Reveal
-
-Reveal 可以在 iOS 开发时动态的查看和修改应用程序的界面。iOS 逆向工程中使用强大，可以分析他人的 APP，缺点是真特么贵。
+## 三、其他一些实用的工具
 
 
-### 3.2 移动统计工具 Flurry
+### 1. 界面调试工具 Reveal
 
-Flurry 是一家专门为移动应用提供数据统计和分析的公司。Flurry 优点：保持独立和专注，数据安全性更高。友盟已经被阿里收购，当用户的应用涉及的业务和阿里有类似或重合的时候，该统计数据有潜在的安全性问题
+[Reveal](http://revealapp.com) 可以在 iOS 开发时动态的查看和修改应用程序的界面。iOS 逆向工程中使用强大，可以分析他人的 APP，缺点是真特么贵。
 
-### 3.3 崩溃日志记录工具 Crashlytics
+![Reveal](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image03.png)
 
-Crashlytics 是专门为移动应用开发者提供的保存和分析应用崩溃信息的专业工具。
+### 2. 移动统计工具 Flurry
 
-### 3.4 App Store 统计工具 App Annie
+[Flurry](http://www.flurry.com) 是一家专门为移动应用提供数据统计和分析的公司，使用 Flurry 服务的公司包括 eBay、Yahoo、Skype 等超过 11 万家公司。Flurry 优点：保持独立和专注，数据安全性更高。友盟已经被阿里收购，当用户的应用涉及的业务和阿里有类似或重合的时候，该统计数据有潜在的安全性问题
 
-App Annie 是一个 App Store 数据的统计分析工具。该工具可以统计 App 在 App Store 的下载量、排名变化、销售收入情况、用户评价等信息。
+### 3. 崩溃日志记录工具 Crashlytics
+
+[Crashlytics](http://try.crashlytics.com) 是专门为移动应用开发者提供的保存和分析应用崩溃信息的专业工具。
+
+### 4. App Store 统计工具 App Annie
+
+[App Annie](http://www.appannie.com) 是一个 App Store 数据的统计分析工具。该工具可以统计 App 在 App Store 的下载量、排名变化、销售收入情况、用户评价等信息。
 
 苹果官方的 iTunes Connect 提供的销售数据统计功能比较差，例如只能保存最近30天的详细销售数据、界面丑陋、无法查看应用的排名历史变化情况等
 
-### 3.5 Xcode 插件
+### 5. Xcode 插件
 
 - Alcatraz：管理 Xcode 插件、模板和颜色配置
 - KSImageNamed：自动弹出图片预览
 - BBUDebuggerTuckAway：智能弹出隐藏调试窗口
+- SCXcodeSwitchExpander：迅速地在 switch 语句中填充枚举类型的每种可能的取值
 - VVDocumenter：自动生成代码注释
 - ClangFormat：自动调整代码风格
 - ColorSense：编写 UIColor 时，实时预览相应的颜色
 
-### 3.6 Dash
+### 6. Dash
 
 Dash 是一款 API 文档查询及代码片段管理工具，超级好用
 
-### 3.7 蒲公英
+### 7. Appledoc
 
-蒲公英是一个应用的内测分发工具，类似苹果的 TestFlight。把 App 安装包上传到蒲公英，生成一个二维码，用户扫码就可以安装应用。类似的还有 FIR 提供同样的服务。
+Appledoc 是一个从源代码中抽取文档的工具
 
 
-
-## 4. 理解内存管理
+## 四、理解内存管理
 
 ### 4.1 我们为什么需要引用计数
 
