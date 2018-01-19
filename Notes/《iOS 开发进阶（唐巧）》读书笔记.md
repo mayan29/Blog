@@ -1,24 +1,32 @@
 # 《iOS 开发进阶（唐巧）》读书笔记
 
 
-![封面](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic00.png)
+![封面](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image01.jpg)
 
 
 ## 1. CocoaPods 的安装和使用
 
-CocoaPods 是开发 iOS 应用程序的一个第三方库的依赖管理工具，起始于2011年8月，用 Ruby 写的。
+### 简介
 
-### 1.0 CocoaPods 的原理
+每种语言发展到一定阶段，都会出现相应的依赖管理工具，例如 Java 的 Maven、Node.js 的 npm 等。CocoaPods 是开发 iOS 应用程序的一个第三方库的依赖管理工具，起始于 2011 年 8 月，用 Ruby 写的。在没有使用 CocoaPods 以前，我们需要:
+
+1. 把这些第三方开源库的源代码文件复制到项目中，或者设置成 git 的 `submodule`。
+2. 对于某些开源库，我还需要设置 -licucore 或者 -fno-objc-arc 等编译参数
+3. 管理这些依赖包的更新。
+
+这些体力活虽然简单，但毫无技术含量并且浪费时间。在使用 CocoaPods 之后，就会自动将这些第三方开源库的源码下载下来，并且为我的工程设置好相应的系统依赖和编译参数。
+
+### 原理
 
 CocoaPods 的原理是将所有的依赖库都放到另一个名为 Pods 的项目中，然后让主项目依赖 Pods 项目。下面是一些技术细节：
 
-- Pods 项目最终会编译成一个名为 libPods.a 的文件，主项目只需要依赖这个 .a 文件即可
-- 对于资源文件，CocoaPods 提供了一个名为 Pods-resources.sh 的 bash 脚本，该脚本每次项目编译时都会执行，将第三方库的各种资源文件复制到目标目录中
-- CocoaPods 通过一个名为 Pods.xcconfig 的文件在编译时设置所有的依赖和参数 
+1. Pods 项目最终会编译成一个名为 libPods.a 的文件，主项目只需要依赖这个 .a 文件即可
+2. 对于资源文件，CocoaPods 提供了一个名为 Pods-resources.sh 的 bash 脚本，该脚本每次项目编译时都会执行，将第三方库的各种资源文件复制到目标目录中
+3. CocoaPods 通过一个名为 Pods.xcconfig 的文件在编译时设置所有的依赖和参数 
 
-### 1.1 CocoaPods 的安装
+### 安装
 
-Mac 自带 ruby，首先升级 ruby 的 gem 命令
+Mac 自带 ruby，如果 ruby 的开发工具包 gem 太老，首先升级 gem
 
 ```
 $ sudo gem update --system
@@ -60,7 +68,7 @@ $ sudo gem install cocoapods
 $ pod setup
 ```
 
-### 1.2 CocoaPods 的使用
+### 使用
 
 在项目文件夹中创建名为 Podfile 的文件
 
@@ -97,24 +105,41 @@ $ pod install
 - 执行 pod install 之后，会生成一个名为 Podfile.lock 的文件，不能把这个文件加入到 gitignore 中，因为 Podfile.lock 会锁定当前各依赖库的版本，之后执行 pod install 也不会更改版本，只有执行 pod update 才会改变 Podfile.lock。这样可以防止第三方库升级时造成大家各自的第三方库版本不一致。
  
 
-### 1.3 其他
+### 其他
 
-为自己的项目创建 podspec 文件参考这两篇文章
+#### 为自己的项目创建 podspec 文件
+
+参考以下两篇文章：
 
 - 《如何编写一个 CocoaPods 的 spec 文件》
 	- http://ishalou.com/blog/2012/10/16/how-to-create-a-cocoapods-spec-file/
 - 《Cocoapods 入门》
 	- http://studentdeng.github.io/blog/2013/09/13/cocoapods-tutorial/
 
-不更新 podspec
+#### 使用私有的 pods
+
+我们可以直接指定某一个依赖的 podspec，这样就可以使用企业内部的私有库。该方案有利于使企业内部的公共项目支持 CocoaPods，例：
+
+```
+$ pod 'MyCommon', :podspec => 'https://yuantiku.com/common/myCommon.podspec'
+```
+
+#### 不更新 podspec
 
 在执行 pod install 和 pod update 时，默认先更新一次 podspec 索引，如下代码可以禁止其做索引更新操作
 
 ```
-pod install --no-repo-update
-pod update  --no-repo-update
+$ pod install --no-repo-update
+$ pod update  --no-repo-update
 ```
 
+#### 生成第三方库的帮助文档
+
+如果你想让 CocoaPods 帮你生产第三方库的帮助文档，并集成到 Xcode 中，那么用 brew 安装 appledoc 即可：
+
+```
+$ brew install appledoc
+```
 
 
 ## 2. 网络封包分析工具 Charles
