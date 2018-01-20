@@ -32,3 +32,7 @@ JDK（Java Development Kit，Java 开发工具包）。其中包含 Java 的开�
 ![icon](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image002.png)
 
 JRE 仅仅是运行工具，如需要开发工具则需搭建 JDK。JDK 开发完成的 Java 程序，交给 JRE 去运行。
+
+
+## 二、第一行代码
+
