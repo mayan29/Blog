@@ -1,6 +1,6 @@
 # 零基础学 Java？看这篇就够了！
 
-image001.png
+![icon](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image001.png)
 
 ## 一、简介
 
@@ -28,5 +28,7 @@ Java 5.0 以前称为 J2ME。Java ME 为在移动设备和嵌入式设备上运�
 JRE（Java Runtime Environment，Java 运行环境）。包括 JVM 和 Java 程序所需的核心类库等。
 
 JDK（Java Development Kit，Java 开发工具包）。其中包含 Java 的开发工具（编译工具、打包工具等）和 JRE，所以安装了 JDK 就不用再单独安装 JRE 了。下载地址：http://www.oracle.com
+
+![icon](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image002.png)
 
 JRE 仅仅是运行工具，如需要开发工具则需搭建 JDK。JDK 开发完成的 Java 程序，交给 JRE 去运行。
