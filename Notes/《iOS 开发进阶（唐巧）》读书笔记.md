@@ -325,28 +325,157 @@ CFRetain 和 CFRelease 方法与 Objective-C 对象的 retain 和 release 方法
 
 ```objc
 dispatch_group_t group = dispatch_group_create();
-    dispatch_group_async(group, dispatch_get_global_queue(0, 0), ^{
-        NSLog(@"任务一完成");
+dispatch_group_async(group, dispatch_get_global_queue(0, 0), ^{
+    NSLog(@"任务一完成");
+});
+dispatch_group_async(group, dispatch_get_global_queue(0, 0), ^{
+    sleep(2);
+    NSLog(@"任务二完成");
+});
+dispatch_group_notify(group, dispatch_get_global_queue(0, 0), ^{
+    NSLog(@"任务全部完成");
+});
+dispatch_async(dispatch_get_global_queue(0, 0), ^{
+    dispatch_group_wait(group, dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC));
+    NSLog(@"dispatch_group_wait 结束");
+});
+```
+
+打印结果为
+
+```
+任务一完成
+任务二完成
+任务全部完成
+dispatch_group_wait 结束
+```
+
+如果将任务二的阻断时间改为 5 秒，结果为：
+
+```
+任务一完成
+dispatch_group_wait 结束
+任务二完成
+任务全部完成
+```
+
+### 2. 后台运行
+
+正常情况下，当应用按 Home 键退出后，应用仅有最多 5 秒时间做一些保存后请理资源的工作。但是应用可以调用后台方法，让应用最多有 10 分钟的时间在后台长久运行。
+
+```objc
+@property (nonatomic, assign) UIBackgroundTaskIdentifier backgroundUpdateTask;
+
+- (void)applicationDidEnterBackground:(UIApplication *)application {
+    
+    [self beingBackgroundUpdateTask];
+    // 在这里加上你需要长久运行的代码
+    [self endBackgroundUpdateTask];
+}
+
+- (void)beingBackgroundUpdateTask {
+ 
+    self.backgroundUpdateTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
+        [self endBackgroundUpdateTask];
+    }];
+}
+
+- (void)endBackgroundUpdateTask {
+ 
+    [[UIApplication sharedApplication] endBackgroundTask:self.backgroundUpdateTask];
+    self.backgroundUpdateTask = UIBackgroundTaskInvalid;
+}
+```
+
+
+## 六、UIWindow 应用场景
+
+### 1. WindowLevel
+
+UIWindow 有一个类型为 `UIWindowLevel` 的属性，该属性定义了 UIWindow 的层级，系统定义的一共有 3 种取值：
+
+```objc
+UIWindowLevelNormal    = 0 
+UIWindowLevelStatusBar = 1000
+UIWindowLevelAlert 	   = 2000
+```
+
+默认程序的 UIWindow 的层级就是 UIWindowLevelNormal，当系统需要在其上面覆盖 UIAlertView 时，就会创建一个层级为 UIWindowLevelAlert 的 UIWindow。在实际应用中，WindowLevel 的取值并不限于这 3 个值。
+
+### 2. 使用场景
+
+适合用 UIWindow 来实现的功能包括：手势解锁、启动页、通知提醒显示、弹框广告等。可以封装成一个单例，方便调用：
+
+```objc
+#import <UIKit/UIKit.h>
+
+@interface MYAlertWindow : UIWindow
+
++ (instancetype)sharedInstance;
+
+- (void)show;
+
+@end
+```
+
+```objc
+#import "MYAlertWindow.h"
+
+@implementation MYAlertWindow
+
++ (instancetype)sharedInstance {
+    
+    static id sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[self alloc] initWithFrame:[UIScreen mainScreen].bounds];
     });
-    dispatch_group_async(group, dispatch_get_global_queue(0, 0), ^{
-        sleep(5);
-        NSLog(@"任务二完成");
-    });
-    dispatch_group_notify(group, dispatch_get_global_queue(0, 0), ^{
-        NSLog(@"任务全部完成");
-    });
-    dispatch_async(dispatch_get_global_queue(0, 0), ^{
-        dispatch_group_wait(group, dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC));
-        NSLog(@"dispatch_group_wait 结束");
-    });
-    ```
+    return sharedInstance;
+}
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        
+        self.backgroundColor = [UIColor grayColor];
+        
+        UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 200, 100)];
+        label.center = self.center;
+        label.backgroundColor = [UIColor whiteColor];
+        label.text = @"警告";
+        label.textAlignment = NSTextAlignmentCenter;
+        [self addSubview:label];
+        
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapClick)];
+        [self addGestureRecognizer:tap];
+    }
+    return self;
+}
+
+- (void)tapClick {
+    [self resignKeyWindow];
+    self.hidden = YES;
+}
+
+- (void)show {
+    [self makeKeyWindow];
+    self.hidden = NO;
+}
+
+@end
+```
+
+调用下列方法即可使用：
+
+```objc
+[[MYAlertWindow sharedInstance] show];
+```
 
 
+## 七、动态下载系统提供的多种中文字体
 
-
-## 五、动态下载系统提供的多种中文字体
-
-字体文件通常比较大，10 ~ 20 MB 是常见的字体库的大小，并且中文字体通常都是有版权的，所以使用特殊中文字体库的 iOS 应用较少，通常只有阅读类的应用才会使用特殊中文字体库。从 iOS 6 开始，苹果支持动态下载中文字体到系统中，使用系统提供的中文字体，既可以避免版权问题，又可以减少应用体积。
+字体文件通常比较大，10 ~ 20 MB 是常见的字体库的大小，如果只是很少量的字体需要设置，导入整个字体库是不划算的，并且中文字体通常都是有版权的，所以使用特殊中文字体库的 iOS 应用较少，通常只有阅读类的应用才会使用特殊中文字体库。从 iOS 6 开始，苹果支持动态下载中文字体到系统中，使用系统提供的中文字体，既可以避免版权问题，又可以减少应用体积。
 
 首先需要使用 Mac 内自带的应用“字体册”（Font Book）来获得相应字体的 PostScript 名称。
 
@@ -372,7 +501,7 @@ NSMutableDictionary *attrs = [NSMutableDictionary dictionaryWithObjectsAndKeys:f
 // 创建一个字体描述对象
 CTFontDescriptorRef desc = CTFontDescriptorCreateWithAttributes((__bridge CFDictionaryRef)attrs);
     
-NSMutableArray *descs = [NSMutableArray arrayWithObject:(id)descs];
+NSMutableArray *descs = [NSMutableArray arrayWithObject:(__bridge id _Nonnull)(desc)];
 CFRelease(desc);
 ```
 
@@ -407,27 +536,36 @@ CTFontDescriptorMatchFontDescriptorsWithProgressHandler((__bridge CFArrayRef)des
 通常需要在下载完字体后开始使用字体，一般是将响应代码放到 kCTFontDescriptorMatchingDidFinish 条件中，用 GCD 修改 UI 或者发 Notification 来通知相应的 Controller。
     
 
+## 八、安全性问题
 
-## 6 安全性问题
+### 1. 密文传输密码
 
-- 网络安全：json 字段加密，使其不能直观的猜出内容
+事先生成一对用于加密的公私钥，客户端在登录时，使用公钥将用户的密码加密后，将密文传输到服务器。服务器使用私钥将密码解密，然后加盐（Salt：在密码学中，指通过在密码任意固定位置插入特定的字符串，让散列后的结果和使用原始密码的散列结果不相符）之后再多次求 MD5，之后再和服务器原来存储的用同样方法处理过的密码匹配，如果一致，则登录成功。这样，即使截获了加密后的密文，由于没有私钥，也无法还原出原始的密码。
 
-- js 文件安全：将 js 源码进行混淆和加密，防止黑客轻易的阅读和篡改相关的逻辑，也可以防止自己的 Web 端和 Native 端通讯协议泄漏
+### 2. JSON 字段加密
 
-- 本地数据安全：对于本地的重要数据，我们应该加密存储或者将其保存到 keychain 中，以保证其不被篡改 
+如果通讯协议被破解，黑客可以模拟客户端登录，进而伪造一些用户行为，可能对用户数据造成危害。我们可以选择类似 [Protobuf](https://code.google.com/p/protobuf/protobuf)（Google 提供的开源数据交换格式，其最大特点是基于二进制，比传统的 JSON 格式要小很多）之类的二进制通讯协议或者自己实现通讯协议，对于传输的内容进行一定程度的加密。
 
-- 源代码安全：对于 IDA 这类工具，我们的应对措施就比较少了，除了用一些宏来简单混淆类名外，我们也可以将关键的逻辑用存 C 实现，不但保证安全性，还可以在 iOS 和 Android 使用同一套底层通讯代码，达到复用的目的。
+### 3. 程序文件加密
+
+很多应用的部分逻辑是用 Web 方式实现的，解压包内容可以看到 js 文件，这些文件都有完整清晰的注释，很容易知道其调用逻辑。通过将 js 源码进行混淆和加密，可以防止黑客轻易地阅读和篡改相关的逻辑，也可以防止 Web 端和 Native 端的通讯协议泄漏。
+
+### 4. 本地数据加密
+
+比如一款游戏，打开本地文件，可以容易地看到各种属性变量的名称和参数，我们就可以简单修改，达到修改游戏参数的目的，淘宝上许多商家就是如此操作。对于本地的重要数据，我们应该加密存储或者将其保存到 keychain 中，以保证其不被篡改。 
+
+### 5. 源代码安全
+
+通过 [IDA](https://www.hex-rays.com/products/ida/) 这类工具进行反编译，可以反汇编到可以方便阅读的程度，更加方便地分析出应用的通讯协议和数据加密方式。对于这类工具，我们的应对措施就比较少了，除了用一些宏来简单混淆类名外，我们也可以将关键的逻辑用存 C 实现，例如微信的 iOS 端通讯底层，就是用 C 实现的。这样的方式除了能保证通讯协议安全外，还可以在 iOS 和 Android 使用同一套底层通讯代码，达到复用的目的。
 
 
+## 九、基于 CoreText 的排版引擎
 
+CoreText 是用于处理文字和字体的底层技术，它直接和 Core Graphics（又称为 Quartz）打交道。Quartz 是一个 2D 图形渲染引擎，能够处理 OSX 和 iOS 中的图形显示问题。使用 CoreText 技术，我们可以对富文本进行复杂的排版。经过一些简单的扩展，我们还可以实现对于图片、链接的点击效果。CoreText 技术相对于 UIWebView 有内存占用少，可以后台渲染的优点，非常适合排版工作。
 
-## 7 基于 CoreText 的排版引擎
+### 1. CoreText 和 UIWebView 比较
 
-使用 CoreText 技术，我们可以对富文本进行复杂的排版。经过一些简单的扩展，我们还可以实现对于图片、链接的点击效果。CoreText 技术相对于 UIWebView 有内存占用少，可以后台渲染的优点，非常适合排版工作。
-
-### CoreText 和 UIWebView 比较
-
-![CoreText和UIWebView](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic01.png)
+![CoreText 和 UIWebView](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image04.png)
 
 #### 优点
 
@@ -440,6 +578,11 @@ CTFontDescriptorMatchFontDescriptorsWithProgressHandler((__bridge CFArrayRef)des
 
 - CoreText 渲染出来的内容不能像 UIWebView 那样方便的支持内容的复制；
 - 基于 CoreText 来排版需要自己处理很多复杂的逻辑，例如需要自己处理图片和文字混排相关的逻辑，也需要自己实现链接点击操作的支持。
+
+### 2. 基于 CoreText 的基础排版引擎
+
+
+
 
 点击[这里](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/基于%20CoreTxt%20的排版引擎.pdf)查看更多
 
@@ -768,7 +911,9 @@ NSLog(@"%@", ^{
 
 > 2017-04-27 一次阅读
 >
-> 前前后后大概半个月，利用零碎时间看完了这本书。这本书前年就有所耳闻，网上的评价也褒贬不一，唐巧写的相对来说，语言通俗易懂，感觉像是博客一样，没有什么限制，读起来很畅快。这本书适合初学者，虽然这本书大部分内容之前都已经熟悉掌握，但是看过一遍还是很有收获的，有些知识点的总结很到位，感觉没有浪费时间。遗留的问题是 CoreText 部分内容打算结合其他资料系统的研究一下，这里就先不仔细阅读了。
+> 前前后后大概半个月，利用零碎时间看完了这本书。这本书前年就有所耳闻，网上的评价也褒贬不一，唐巧写的相对来说，语言通俗易懂，感觉像是博客一样，没有什么限制，读起来很畅快。这本书适合初学者，虽然大部分内容之前都已经熟悉掌握，但是看过一遍还是很有收获的，有些知识点的总结很到位，感觉没有浪费时间。遗留的问题是 CoreText 部分内容打算结合其他资料系统的研究一下，这里就先不仔细阅读了。
 > 
 > 2018-01-19 二次阅读 
+> 
+> 大概两天时间，就又通读了一遍，稍稍有一点收获吧，模糊的概念捋顺了一遍，总体来说内容很简单，用不到的功能还是没有细看，比如内购。
 
