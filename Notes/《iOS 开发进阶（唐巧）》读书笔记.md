@@ -584,7 +584,7 @@ CoreText 是用于处理文字和字体的底层技术，它直接和 Core Graph
 这部分没有细看，待总结，具体文章内容和示例点击[这里](https://github.com/Mayan29/Blog/tree/master/Notes/SDK/《iOS%20开发进阶（唐巧）》读书笔记)。
 
 
-## 十、实战技巧
+## 十、开发技巧
 
 ### 1. 申请加急审核
 
@@ -669,7 +669,7 @@ iOS 7 以后的系统，可以通过系统提供的 API 来实现截屏功能
 
 这样，平时这个背景我们用内容遮挡住，当用户用手指向右滑动，我们将整个界面右移，露出这个背景，于是就会像看到了上一个 ViewController 一样。
 
-### 8.6 内存警告
+### 7. 内存警告
 
 1. CALayer 是一个 bitmap 图像的容器类，当 UIView 调用自身的 drawRect 时，CALayer 才会创建这个 bitmap 图像类。
 2. CALayer 只占 48 Bytes，UIView 只占 96 Bytes，而一个 iPad 的全屏 UIView 的 bitmap 类会占到 12 MB 的大小！
@@ -677,8 +677,7 @@ iOS 7 以后的系统，可以通过系统提供的 API 来实现截屏功能
 4. 当一段内存被分配时，它会被标记成 In use 以防止被重复使用，当内存被释放时，这段内存会被标记成 Not in use，这样在有新的内存申请时，这块内存就可能被分配给其他变量。
 5. CALayer 包括的具体的 bitmap 内容的私有成员变量类型为 CABackingStore，当收到 MemoryWarning 时，CABackingStore 类型的内存区会被标记成可能再次被原变量使用。
 
-
-### 8.7 Xcode 快捷键
+### 8. Xcode 快捷键
 
 #### 常用快捷键
 
@@ -699,28 +698,77 @@ Cmd + 0 | 隐藏左边的导航区
 Cmd + Opt + 0 | 隐藏右边的工具区
 Cmd + Shift + K | 清空编译好的文件
 
+### 9. 为工程增加 Daily Build
+
+我们可以用 bash 写一个 Daily Build 脚本，可以参考 @lexrus 的自动打包脚本 [ios-makefile](https://github.com/lexrus/ios-makefile)
 
 
+## 十一、Objective-C 对象
 
+### 1. isa 指针
 
-## 9. Objective-C 对象
+我们进入 `NSObject.h` 和 `objc.h` 可以看到，NSObject 就是一个包含 isa 指针的结构体：
 
-### 9.1 isa 指针
+![CoreText 和 UIWebView](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image05.png)
 
-- 每一个对象都是一个类的实例，每一个对象都有一个名为 isa 的指针，指向该对象的类；
-- 每一个类描述了它的实例的特点，包括成员变量的列表、成员函数的列表等；
-- 每一个对象都可以接收消息，消息列表保存在它所对应的类中。每一个类也可以接收消息，例如 [NSObject alloc]；
-- 每一个类也是一个对象，每一个类也有一个 isa 的指针，所以它必须是另一个类的实例，这个类就是元类。元类保存了类方法的列表。当一个类方法被调用时，元类会首先查找它本身是否有该类方法的实现，如果没有，该元类会向它的父类查找该方法；
-- 元类也是一个对象，为了设计上的完整，所有的元类的 isa 指针都会指向一个根元类，根元类本身的 isa 指针指向自己；
+![CoreText 和 UIWebView](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image06.png)
 
+按照面向对象语言的设计原则，所有事物都应该是对象，严格来说，Objective-C 并没有完全做到这一点，因为它有像 int、double 这样的简单变量类型，而类似 Ruby 一类语言，连 int 变量也是对象。
 
-### 9.2 动态创建类和对象
+我们进入 `runtime.h` 中打开 Class 的定义头文件，可以看到，Class 也是一个包含 isa 指针的结构体
+
+![CoreText 和 UIWebView](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image07.png)
+
+类也是一个对象，所以它也必须是另一个类的实例，这个类就是元类（metaclass），元类保存了类方法的列表。当一个类方法被调用时，元类会首先查找它本身是否有该类方法的实现。
+
+元类也是一个对象，那么元类的 isa 指针又指向哪里呢？为了设计上的完整，所有元类 isa 指针都会指向一个根元类（root metaclass），根元类本身的 isa 指针指向自己，这样就形成了一个闭环。
+
+### 2. 类的成员变量
+
+如果把类的实例看成一个 C 语言的结构体，上面说的 isa 指针就是这个结构体的第一个成员变量，而类的其他成员变量依次排列在结构体中。为了验证排列顺序，在 main.m 中运行如下代码：
+
+```objc
+#import <UIKit/UIKit.h>
+#import "AppDelegate.h"
+
+@interface Father : NSObject {
+    int _father;
+}
+@end
+
+@implementation Father
+@end
+
+@interface Child : Father {
+    int _child;
+}
+@end
+
+@implementation Child
+@end
+
+int main(int argc, char * argv[]) {
+    
+    Child *child = [[Child alloc] init];
+    
+    @autoreleasepool {
+        return UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class]));
+    }
+}
+```
+
+我们在 @autoreleasepool 处打断点，在 Console 中输入 `p *child` 则可以看到输出如下
+
+![CoreText 和 UIWebView](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image08.png)
+
+因为对象在内存中排布可以看成一个结构体，结构体的大小并不能动态变化，所以无法在运行时动态地给对象添加成员变量。但是对象的方法定义都保存在类的可变区域中，通过修改方法列表的指针，就可以动态地为某一个类增加成员变量，这也是 Category 实现的原理，同时也说明了为什么 Category 只能为对象增加成员方法，却不能增加成员变量。
+
+### 3. 动态创建类和对象
 
 ```objc
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    
     // 创建一个名为 MYView 的类，它是 UIView 的子类
     Class newClass = objc_allocateClassPair([UIView class], "MYView", 0);
     
@@ -743,10 +791,16 @@ void ReportFunction(id self, SEL _cmd)
 }
 ```
 
-### 9.3 动态方法替换
+执行结果为：
+
+```objc
+Class is MYView, and super is UIView
+```
+
+### 4. 动态方法替换
 
 - class_replaceMethod，当需要替换的方法有可能不存在时使用；
-- method_exchangeIpmlementations，当需要交换两个方法的实现时使用；
+- method_exchangeImplementations，最常用的方法，当需要交换两个方法的实现时使用；
 - method_setImplementation，仅仅需要为一个方法设置其实现方式时使用。
 
 
