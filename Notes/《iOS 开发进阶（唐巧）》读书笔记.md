@@ -581,12 +581,7 @@ CoreText 是用于处理文字和字体的底层技术，它直接和 Core Graph
 
 ### 2. 基于 CoreText 的排版引擎框架
 
-对于一个复杂的排版引擎来说，可以将功能拆成以下几个类来完成：
-
-1. CTFrameParserConfig 类，用于配置绘制的参数，例如文字颜色、大小、行间距等。
-2. CTFrameParser 类，用于生成最后绘制界面需要的 CTFrameRef 实例。
-3. CoreTextData 类，用于保存由 CTFrameParser 类生成的 CTFrameRef 实例，以及 CTFrameRef 实际绘制需要的高度。
-4. CTDisplayView 类，持有 CoreTextData 类的实例，负责将 CTFrameRef 绘制到界面上。
+这部分没有细看，待总结，具体文章内容点击查看：[基于CoreText的排版引擎]()，示例点击查看：[CoreText]()。
 
 
 
