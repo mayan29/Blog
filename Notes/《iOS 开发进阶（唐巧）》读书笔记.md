@@ -581,18 +581,12 @@ CoreText 是用于处理文字和字体的底层技术，它直接和 Core Graph
 
 ### 2. 基于 CoreText 的排版引擎框架
 
-这部分没有细看，待总结，具体文章内容点击查看：[基于CoreText的排版引擎]()，示例点击查看：[CoreText]()。
+这部分没有细看，待总结，具体文章内容和示例点击[这里](https://github.com/Mayan29/Blog/tree/master/Notes/SDK/《iOS%20开发进阶（唐巧）》读书笔记)。
 
 
+## 十、实战技巧
 
-
-
-
-
-
-## 8. 实战技巧
-
-### 8.1 申请加急审核
+### 1. 申请加急审核
 
 1. 访问 iTunes Connect 网站：[https://itunesconnect.apple.com](https://itunesconnect.apple.com) 
 2. 单击网站底部的 Contact Us 按钮
@@ -600,11 +594,22 @@ CoreText 是用于处理文字和字体的底层技术，它直接和 Core Graph
 4. 在问题 2 中选择 Request Expedited Review
 5. 单击 Request an Expedited App Review 按钮即可填写加急审核的申请表。最好使用英文填写，最容易通过的理由是严重的崩溃 bug（在理由一栏选择 Critical Bug Fix），在原因处详细描述该 bug 的重现步骤，则很容易使申请通过。
 
-### 8.2 如何将应用下架
+### 2. 如何将应用下架
 
 最简单的办法是将应用的上架时间改成未来的一个时间，这样就会在数小时之内下架
 
-### 8.3 NSJSONSerialization 比 NSKeyedArchiver 更好
+### 3. 收起键盘的其他方式
+
+在 UIViewController 中收起键盘，除了调用相应控件的 `resignFirstResponder` 方法外，还有另外三种方法：
+
+1. 重载 UIViewController 中的 `touchesBegin` 方法，然后在里面执行 `[self.view endEditing:YES];`，这样点击 UIViewController 任意地方，就可以收起键盘；
+
+2. 直接执行 `[[UIApplication sharedApplication] sendAction:@selector(resignFirstResponder) to:nil from:nil forEvent:nil];
+`，用于在获取当前 UIViewController 比较困难的时候使用；
+
+3. 直接执行 `[[UIApplication sharedApplication].keyWindow endEditing:YES];`
+
+### 4. NSJSONSerialization 比 NSKeyedArchiver 更好
 
 在选择持久化方案时，系统提供的 NSJSONSerialization 比 NSKeyedArchiver 在效率和体积上都更优。经过测试，NSJSONSerialization 比 NSKeyedArchiver 快了 7 倍，而且序列化之后的体积是 NSKeyedArchiver 的一半。
 
@@ -627,14 +632,12 @@ for (int i = 0; i < 100000; i++) {
     [persons2 addObject:[NSKeyedArchiver archivedDataWithRootObject:dic]];
 }
     
-    
 NSLog(@"NSKeyedArchiver 结束存储");
 ```
 
 测试结果为：NSJSONSerialization 用了 0.426 秒，NSKeyedArchiver 用了 4.344 秒
 
-
-### 8.4 设置应用内的系统控件语言
+### 5. 设置应用内的系统控件语言
 
 在 iOS 系统中，有时候会需要调用系统的一些 UI 控件，例如：
 
@@ -652,8 +655,7 @@ NSLog(@"NSKeyedArchiver 结束存储");
 </array>
 ```
 
-
-### 8.5 用截屏功能来实现侧滑返回效果
+### 6. 用截屏功能来实现侧滑返回效果
 
 iOS 7 以后的系统，可以通过系统提供的 API 来实现截屏功能
 
