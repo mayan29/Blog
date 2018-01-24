@@ -907,13 +907,13 @@ iPhone 5s 配备了首个采用 64 位架构的 A7 双核处理器，同时提�
 
 所以如果没有 Tagged Pointer 对象，从 32 位机器迁移到 64 位机器中，虽然逻辑没有变化，但是对象所占用的内存会翻倍：
 
-![Tagged Pointer](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image09.png)
+![Tagged Pointer](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image09.jpg)
 
 ### 2. Tagged Pointer 介绍
 
 为了改进上面提到的内存占用和效率问题，苹果提出了 Tagged Pointer 对象。将一个对象的指针拆成两部分，一部分直接保存数据，另一部分作为特殊标记，表示这是一个特别的指针，不指向任何一个地址，64 位 CPU 下 NSNumber 的内存图变成下面这样：
 
-![Tagged Pointer2](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image10.png)
+![Tagged Pointer2](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image10.jpg)
 
 ### 3. Tagged Pointer 特点
 
