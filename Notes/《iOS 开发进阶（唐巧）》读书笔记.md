@@ -709,15 +709,15 @@ Cmd + Shift + K | 清空编译好的文件
 
 我们进入 `NSObject.h` 和 `objc.h` 可以看到，NSObject 就是一个包含 isa 指针的结构体：
 
-![CoreText 和 UIWebView](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image05.png)
+![NSObject.h](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image05.png)
 
-![CoreText 和 UIWebView](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image06.png)
+![objc.h](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image06.png)
 
 按照面向对象语言的设计原则，所有事物都应该是对象，严格来说，Objective-C 并没有完全做到这一点，因为它有像 int、double 这样的简单变量类型，而类似 Ruby 一类语言，连 int 变量也是对象。
 
 我们进入 `runtime.h` 中打开 Class 的定义头文件，可以看到，Class 也是一个包含 isa 指针的结构体
 
-![CoreText 和 UIWebView](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image07.png)
+![runtime.h](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image07.png)
 
 类也是一个对象，所以它也必须是另一个类的实例，这个类就是元类（metaclass），元类保存了类方法的列表。当一个类方法被调用时，元类会首先查找它本身是否有该类方法的实现。
 
@@ -759,7 +759,7 @@ int main(int argc, char * argv[]) {
 
 我们在 @autoreleasepool 处打断点，在 Console 中输入 `p *child` 则可以看到输出如下
 
-![CoreText 和 UIWebView](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image08.png)
+![结构体](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image08.png)
 
 因为对象在内存中排布可以看成一个结构体，结构体的大小并不能动态变化，所以无法在运行时动态地给对象添加成员变量。但是对象的方法定义都保存在类的可变区域中，通过修改方法列表的指针，就可以动态地为某一个类增加成员变量，这也是 Category 实现的原理，同时也说明了为什么 Category 只能为对象增加成员方法，却不能增加成员变量。
 
@@ -799,18 +799,106 @@ Class is MYView, and super is UIView
 
 ### 4. 动态方法替换
 
-- class_replaceMethod，当需要替换的方法有可能不存在时使用；
-- method_exchangeImplementations，最常用的方法，当需要交换两个方法的实现时使用；
-- method_setImplementation，仅仅需要为一个方法设置其实现方式时使用。
+4.1. `method_exchangeImplementations`，最常用的方法，当需要交换两个方法的实现时使用
+
+```objc
+Method viewWillAppear = class_getInstanceMethod(self, @selector(viewWillAppear:));
+Method bimViewWillAppear = class_getInstanceMethod(self, @selector(bimViewWillAppear:));
+method_exchangeImplementations(viewWillAppear, bimViewWillAppear);
+```
+
+4.2. `class_replaceMethod`，当被替换的方法有可能没有实现时使用
+
+```objc
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    Class class = self.class;
+    
+    SEL originalSelector = @selector(viewWillAppear:);
+    SEL swizzledSelector = @selector(bimViewWillAppear:);
+    
+    Method originalMethod = class_getInstanceMethod(class, originalSelector);
+    Method swizzledMethod = class_getInstanceMethod(class, swizzledSelector);
+    
+    BOOL didAddMethod = class_addMethod(class, originalSelector, method_getImplementation(swizzledMethod), method_getTypeEncoding(swizzledMethod));
+    if (didAddMethod) {
+        class_replaceMethod(class, swizzledSelector, method_getImplementation(originalMethod), method_getTypeEncoding(originalMethod));
+    }
+}
+
+- (void)bimViewWillAppear:(BOOL)animated {
+    
+    NSLog(@"调用了 bimViewWillAppear: 方法");
+    
+    [self bimViewWillAppear:animated];
+}
+```
+
+打印结果为：
+
+```
+调用了 bimViewWillAppear: 方法
+```
+
+如果在该类中实现了 `viewWillAppear:` 方法：
+
+```objc
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+
+    NSLog(@"调用了 viewWillAppear: 方法");
+}
+```
+
+则打印结果为：
+
+```
+调用了 viewWillAppear: 方法
+```
+
+说明 `didAddMethod` 返回 NO，没有实现方法交换。
+
+其实使用 `viewWillAppear:` 方法并没有展示出来该方法的作用。比较实用的地方用在：子类继承父类，在子类中没有父类方法的覆写，子类的扩展类中实现父类方法交换。
+
+4.3. `method_setImplementation`，直接为一个方法设置其实现方式时使用。
+
+```objc
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    Method method1 = class_getInstanceMethod(self.class, @selector(work));
+    Method method2 = class_getInstanceMethod(self.class, @selector(study));
+    IMP imp2 = method_getImplementation(method2);
+    
+    method_setImplementation(method1, imp2);
+    
+    [self work];
+}
+
+- (void)work {
+    NSLog(@"工作");
+}
+
+- (void)study {
+    NSLog(@"学习");
+}
+```
+
+打印结果为：
+
+```objc
+学习
+```
+
+其实 `method_exchangeImplementations` 方法就是调用了两次 `method_setImplementation`
 
 
-
-## 10. Tagged Pointer 对象
-
+## 十二、Tagged Pointer 对象
 
 iPhone 5s 配备了首个采用 64 位架构的 A7 双核处理器，同时提出了 Tagged Pointer 的概念。对于 64 位系统，引入 Tagged Pointer 后，相关逻辑能减少一半的内存占用，3 倍的访问速度提升，100 倍的创建、销毁速度提升。
 
-### 10.1 原有系统的问题
+### 1. 原有系统的问题
 
 举个例子：
 
@@ -819,23 +907,21 @@ iPhone 5s 配备了首个采用 64 位架构的 A7 双核处理器，同时提�
 
 所以如果没有 Tagged Pointer 对象，从 32 位机器迁移到 64 位机器中，虽然逻辑没有变化，但是对象所占用的内存会翻倍：
 
-![32 位](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic02.jpg)
+![Tagged Pointer](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image09.png)
 
-
-### 10.2 Tagged Pointer 介绍
+### 2. Tagged Pointer 介绍
 
 为了改进上面提到的内存占用和效率问题，苹果提出了 Tagged Pointer 对象。将一个对象的指针拆成两部分，一部分直接保存数据，另一部分作为特殊标记，表示这是一个特别的指针，不指向任何一个地址，64 位 CPU 下 NSNumber 的内存图变成下面这样：
 
-![64 位](https://github.com/Mayan29/ReadingNotes/blob/master/01.《iOS%20开发进阶（唐巧）》读书笔记/DATA/pic03.jpg)
+![Tagged Pointer2](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image10.png)
 
-### 10.3 Tagged Pointer 特点
+### 3. Tagged Pointer 特点
 
 1. Tagged Pointer 专门用来存储小的对象，例如 NSNumber 和 NSDate；
 2. Tagged Pointer 指针的值不再是地址，而是真正的值。所以实际上它不再是一个对象了，只是一个披着对象“皮”的普通变量而已，所以，它的内存并不存储在堆中；
 3. 在内存读取上有着以前 3 倍的效率，创建时比以前快 106 倍。
 
-
-### 10.4 引用计数相关变化
+### 4. 引用计数相关变化
 
 在 32 位环境下，对象的引用计数都保存在一个外部的表中，每一个对象的 Retain 操作，实际包括如下 5 个步骤：
 
@@ -855,8 +941,7 @@ iPhone 5s 配备了首个采用 64 位架构的 A7 双核处理器，同时提�
 
 虽然步骤都是 5 步，但是由于没有了全局的加锁操作，所以引用计数的更改更快了。
 
-
-### 10.5 isa 的 bit 位含义
+### 5. isa 的 bit 位含义
 
 bit 位 | 变量名 | 意义
 --- | --- | ---
@@ -871,10 +956,11 @@ bit 位 | 变量名 | 意义
 19 bits | extra_rc | 表示该对象超过 1 的引用计数值，例如，如果该对象的引用计数是 6，则 extra_rc 的值为 5 
 
 
+## 十三、block 对象模型
 
-## 11. block 对象
+### 1. block 内部数据结构定义
 
-### 11.1 block 内部数据结构定义
+从苹果的 LLVM 项目的[开源代码](https://llvm.org/svn/llvm-project/compiler-rt/tags/Apple/Libcompiler_rt-10/BlocksRuntime/Block_private.h)中可以得到 block 数据结构定义，如下：
 
 ```objc
 struct Block_descriptor {
@@ -890,6 +976,7 @@ struct Block_layout {
     int reserved; 
     void (*invoke)(void *, ...);
     struct Block_descriptor *descriptor;
+    /* Imported variables. */
 };
 ```
 
@@ -902,12 +989,11 @@ struct Block_layout {
 5. descriptor，表示该 block 的附加描述信息，主要是 size 大小，以及 copy 和 dispose 函数的指针
 6. variables，capture 过来的变量，block 能够访问它外部的局部变量，就是因为将这些变量（或变量的地址）复制到了结构体中。
 
-### 11.2 block 三种类型
+### 2. block 三种类型
 
 - _NSConcreteGlobalBlock，全局的静态 block，不会访问任何外部变量；
 - _NSConcreteStackBlock，保存在栈中的 block，当函数返回时会被销毁；
 - _NSConcreteMallocBlock，保存在堆中的 block，当引用计数为 0 时会被销毁。
-
 
 #### NSGlobalBlock
 
@@ -965,7 +1051,6 @@ NSLog(@"%@", ^{
 4. __block 对象可以在 block 中被重新赋值，__weak 不可以。
 
 
-
 ## 后记
 
 > 2017-04-27 一次阅读
@@ -975,4 +1060,3 @@ NSLog(@"%@", ^{
 > 2018-01-19 二次阅读 
 > 
 > 大概三天时间通读了一遍，又有一点点收获吧，模糊的概念捋顺了一遍，总体来说内容很简单，用不到的功能还是没有细看，比如内购、CoreText 等等模块。
-
