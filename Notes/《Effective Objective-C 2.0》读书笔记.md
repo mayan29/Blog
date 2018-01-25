@@ -180,7 +180,7 @@ switch (_currentState) {
 
 原来表示 `_firstName` 的偏移量现在却指向 `_dataOfBirth`，把偏移量硬编码于其中的那些代码都会读取到错误的值
 
-![在类中新增另一个实例变量前后的数据布局图](https://github.com/Mayan29/Blog/blob/master/Notes/Images/02-image02.jpg)
+![在类中新增另一个实例变量前后的数据布局图](https://github.com/Mayan29/Blog/blob/master/Notes/Images/02-image02.png)
 
 如果代码使用了编译期间计算出来的偏移量，那么在修改类定义之后必须重新编译，否则就会出错。
 
@@ -200,26 +200,28 @@ readwrite / readonly
 
 #### 内存管理语义
 
-■ assign：纯量类型（scalar type），简单赋值操作
+- assign：纯量类型（scalar type），简单赋值操作
 
-■ strong：拥有关系（owning relationship），为这种属性设置新值时，设置方法会先保留新值，并释放旧值，然后再将新值设置上去。
+- strong：拥有关系（owning relationship），为这种属性设置新值时，设置方法会先保留新值，并释放旧值，然后再将新值设置上去。
 
-■ weak：非拥有关系（nonowning relationship），为这种属性设置新值时，设置方法既不保留新值，也不释放旧值，类似 assign
+- weak：非拥有关系（nonowning relationship），为这种属性设置新值时，设置方法既不保留新值，也不释放旧值，类似 assign
 
-■ copy：拷贝（copy），当属性类型为 NSString* 时，经常用此特质来保护其封装性，因为传递给设置方法的新值有可能指向一个 NSMutableString 类的实例，此类是 NSString 的子类，如果不拷贝字符串，那么设置完属性后，字符串的值就会在对象不知情的情况被修改
+- copy：拷贝（copy），当属性类型为 NSString* 时，经常用此特质来保护其封装性，因为传递给设置方法的新值有可能指向一个 NSMutableString 类的实例，此类是 NSString 的子类，如果不拷贝字符串，那么设置完属性后，字符串的值就会在对象不知情的情况被修改
 
 #### 方法名
+
+getter=<name> / setter=<name>
 
 ```objc
 @property (nonatomic, getter=isOn) BOOL on;
 ```
 
 
-## 7. 在对象内部尽量直接访问实例变量
+## 7. 在对象内部读写是否使用实例变量
 
 直接访问实例变量和通过属性访问区别如下：
 
-- 直接访问实例变量的速度更快，由于不经过 OC 的方法派发（method dispatch），编译器所生成的代码会直接访问保存对象实例变量的那块内存；
+- 直接访问实例变量的速度更快，由于不经过 OC 的`方法派发`（method dispatch），编译器所生成的代码会直接访问保存对象实例变量的那块内存；
 
 - 直接访问实例变量不会调用设置方法，比如在 ARC 下直接访问一个声明为 copy 的属性，那么并不会拷贝该属性，只会保留新值并释放旧值；
 
@@ -247,7 +249,6 @@ readwrite / readonly
 
 @interface MYPerson : NSObject
 
-
 typedef NS_ENUM(NSUInteger, MYPersonType) {
 
     MYPersonTypeStudent,
@@ -255,15 +256,10 @@ typedef NS_ENUM(NSUInteger, MYPersonType) {
     MYPersonTypeWorker,
 };
 
-
 @property (nonatomic, copy) NSString *name;
 @property (nonatomic, assign) NSUInteger age;
 
-
-
 + (instancetype)personWithType:(MYPersonType)type;
-
-
 - (void)introduceMyself;
 
 @end
@@ -293,12 +289,10 @@ typedef NS_ENUM(NSUInteger, MYPersonType) {
     }
 }
 
-
 - (void)introduceMyself
 {
     NSLog(@"%@", self.class);
 }
-
 
 @end
 ```
@@ -310,17 +304,24 @@ MYPerson *person = [MYPerson personWithType:MYPersonTypeWorker];
 [person introduceMyself];
 ```
 
+
 ## 9. 理解 objc_msgSend 的作用
 
 ### 9.1 基本消息传递
 
 ```objc
-void objc_msgSend(id self, SEL cmd, ...)
+id returnValue = [someObject messageName:parameter];
 ```
 
-objc_msgSend 函数依据`接受者`（receiver）和`选择子`（selector）的类型来调用适当的方法，该方法需要在接受者所属的类中搜寻其`方法列表`（list of methods），如果能找到与选择子名称相符的方法，就跳至其实现代码。如果找不到，就沿着继承体系继续向上查找，找到合适的方法再跳转。如果最终还是找不到，那就执行`消息转发`（message forwarding）
+上面所示方法中，someObject 叫做`接受者`（receiver），messageName 叫做`选择子`（selector），选择子和参数合起来称为`消息`（message）。编译器将其转换为一条 C 语言函数调用，所调函数乃是消息传递机制中的核心函数，叫做 `objc_msgSend `，其原型如下：
 
-这么说来，想调用一个方法似乎需要很多步骤，但是，objc_msgSend 会将匹配结果缓存在`快速映射表`（fast map）里面，每个类都有这样一块缓存，如果稍后还向该类发送与选择子相同的消息，那么执行起来就很快了。
+```objc
+id returnValue = objc_msgSend(someObject, @selector(messageName:), parameter);
+```
+
+`objc_msgSend` 函数依据`接受者`和`选择子`的类型来调用适当的方法，该方法需要在接受者所属的类中搜寻其`方法列表`（list of methods），如果能找到与选择子名称相符的方法，就跳至其实现代码。如果找不到，就沿着继承体系继续向上查找，找到合适的方法再跳转。如果最终还是找不到，那就执行`消息转发`（message forwarding）
+
+这么说来，想调用一个方法似乎需要很多步骤，但是，`objc_msgSend` 会将匹配结果缓存在`快速映射表`（fast map）里面，每个类都有这样一块缓存，如果稍后还向该类发送与选择子相同的消息，那么执行起来就很快了。
 
 ### 9.2 其他消息传递
 
@@ -334,20 +335,20 @@ objc_msgSend 函数依据`接受者`（receiver）和`选择子`（selector）�
 
 #### objc\_msgSendSuper
 
-如果要给超类发消息，例如 `[super message:parameter]`，那么就交由此函数处理。也有另外两个与 objc_msgSend_stret 和 objc_msgSend_fpret 等效的函数，用于处理发给 super 的相应消息。
+如果要给超类发消息，例如 `[super message:parameter]`，那么就交由此函数处理。也有另外两个与 `objc_msgSend_stret` 和 `objc_msgSend_fpret` 等效的函数，用于处理发给 super 的相应消息。
 
 ### 9.3 尾调用优化
 
-每个类里都有一张表格，其中的指针都会指向这个函数，而选择子的名称则是查表时所用的 key，objc_msgSend 等函数的原理是，通过这张表格来寻找应该执行的方法。
+每个类里都有一张表格，其中的指针都会指向这个函数，而选择子的名称则是查表时所用的 key，`objc_msgSend` 等函数的原理是，通过这张表格来寻找应该执行的方法。
 
-原型的样子和 objc_msgSend 函数很像，这是利用`尾调用优化`（tail-call optimization）技术（函数最后一项操作是调用另外一个函数），编译器会生成跳转至另一个函数所需的指令码，而且不会向调用堆栈中推入新的`栈帧`（frame stack）。这项优化对 objc_msgSend 非常关键，如果不这么做的话，每次调用 OC 方法之前，都需要为调用 objc_msgSend 函数准备栈帧。此外，若不优化，还会过早的发生`栈溢出`（stack overflow）现象。
+原型的样子和 `objc_msgSend` 函数很像，这是利用`尾调用优化`（tail-call optimization）技术（函数最后一项操作是调用另外一个函数），编译器会生成跳转至另一个函数所需的指令码，而且不会向调用堆栈中推入新的`栈帧`（frame stack）。这项优化对 `objc_msgSend` 非常关键，如果不这么做的话，每次调用 Objective-C 方法之前，都需要为调用 `objc_msgSend` 函数准备栈帧。此外，若不优化，还会过早的发生`栈溢出`（stack overflow）现象。
 
 
 ## 10. 理解消息转发机制
 
 在编译期间向类发送了其无法解读的消息并不会报错，因为在运行期可以继续向类中添加方法。当对象接收到无法解读的消息后，就会启动`消息转发`（message forwarding）机制。
 
-消息转发分为两大阶段
+消息转发分为两大阶段：
 
 #### 动态方法解析（dynamic method resolution）
 
@@ -355,7 +356,7 @@ objc_msgSend 函数依据`接受者`（receiver）和`选择子`（selector）�
 
 #### 完整的消息转发机制（full forwarding mechanism）
 
-首先，接受者看看有没有其他对象能处理这条消息，如果有，运行时会把消息转给那个对象，消息转发过程结束，一切正常。若没有`备援的接收者`（replacement receiver）则启动完整的消息转发机制，运行时会把与消息有关的全部细节封装到 NSInvocation 对象中，再给接受者最后一次机会，令其设法解决当前还未处理的这条消息。
+首先，接受者看看有没有其他对象能处理这条消息，如果有，运行时会把消息转给那个对象，消息转发过程结束，一切正常。若没有`备援的接收者`（replacement receiver）则启动完整的消息转发机制，运行时会把与消息有关的全部细节封装到 `NSInvocation` 对象中，再给接受者最后一次机会，令其设法解决当前还未处理的这条消息。
 
 ### 10.1 动态方法解析
 
@@ -390,10 +391,8 @@ SEL sel = NSSelectorFromString(@"fly");
 
 @implementation Person
 
-
 + (BOOL)resolveInstanceMethod:(SEL)sel
 {
-    
     NSString *selString = NSStringFromSelector(sel);
     if ([selString isEqualToString:@"fly"]) {
         
@@ -513,8 +512,9 @@ void fly(id self, SEL _cmd) {
 @end
 ```
 
-接收者在每一步均有机会处理消息，步骤越往后，处理消息的代价就越大，最好能在第一步就处理完，这样的话，运行时就可以将此方法缓存取来了。若想在第三步里把消息转给备援的接收者，那还不如把转发操作提前到第二步。因为第三步只是修改了调用目标，这项改动放在第二步执行会更为简单，不然的话，还得创建并处理完整的 NSInvocation
+接收者在每一步均有机会处理消息，步骤越往后，处理消息的代价就越大，最好能在第一步就处理完，这样的话，运行时就可以将此方法缓存取来了。若想在第三步里把消息转给备援的接收者，那还不如把转发操作提前到第二步。因为第三步只是修改了调用目标，这项改动放在第二步执行会更为简单，不然的话，还得创建并处理完整的 `NSInvocation`
 
+![消息转发](https://github.com/Mayan29/Blog/blob/master/Notes/Images/02-image03.jpg)
 
 
 ## 11. 自定义初始化方法
@@ -523,7 +523,6 @@ void fly(id self, SEL _cmd) {
 #import "Person.h"
 
 @implementation Person
-
 
 - (instancetype)initWithName:(NSString *)name
 {
@@ -545,25 +544,7 @@ void fly(id self, SEL _cmd) {
 
 ## 12. 实现 description 方法
 
-调试程序时，经常需要打印并查看对象信息，比如打印数组信息：
-
-```objc/Users/may-g/Desktop/立刻删除/立刻删除
-NSArray *arr = @[@1, @2, @3, @4];
-NSLog(@"%@", arr);
-```
-
-打印结果为
-
-```objc
-(
-    1,
-    2,
-    3,
-    4
-)
-```
-
-但是如果打印自定义的类的时候却是这样的：
+打印自定义的类结果如下：
 
 ```
 <Person: 0x608000001530>
@@ -575,7 +556,6 @@ NSLog(@"%@", arr);
 #import "Person.h"
 
 @implementation Person
-
 
 - (NSString *)description
 {
@@ -623,7 +603,6 @@ NSLog(@"%@", p);
 
 @implementation Person
 
-
 - (instancetype)initWithName:(NSString *)name andAge:(NSInteger)age
 {
     if (self = [super init]) {
@@ -641,13 +620,14 @@ NSLog(@"%@", p);
 @end
 ```
 
+
 ## 14. 协议、委托、分类
 
-OC 语言有一项特性叫做`协议`（protocol），它与 Java 的`接口`（interface）类似。定义一套接口，某对象若想接受另一个对象的委托，则需遵从此接口，以便成为其`委托对象`（delegate），而这另一个对象则可以给其委托对象回传一些信息，也可以在发生相关事件时通知委托对象。
+Objective-C 语言有一项特性叫做`协议`（protocol），它与 Java 的`接口`（interface）类似。定义一套接口，某对象若想接受另一个对象的委托，则需遵从此接口，以便成为其`委托对象`（delegate），而这另一个对象则可以给其委托对象回传一些信息，也可以在发生相关事件时通知委托对象。
 
 此模式可将数据和业务逻辑解耦，比方说，用户界面里有个显示数据所用的视图，那么，此视图只应包含显示数据所需的逻辑代码，而不应决定要显示何种数据以及数据之间如何交互问题。视图对象的属性中，可以包含负责数据与事件处理的对象。这两种对象分别称为`数据源`（data source）与`委托`（delegate）
 
-利用`分类`（Category）机制，我们无须继承子类即可直接为当前类添加方法，而在其他语言中，需通过继承子类来实现。由于 OC 运行时是高度动态的，所以才能支持这一特性。
+利用`分类`（Category）机制，我们无须继承子类即可直接为当前类添加方法，而在其他语言中，需通过继承子类来实现。由于 Objective-C 运行时是高度动态的，所以才能支持这一特性。
 
 
 ## 15. 以自动释放池块降低内存峰值
@@ -679,7 +659,7 @@ for (int i = 0; i < 100000; i++) {
 
 当前多线程编程的核心就是`块`（block）和`大中枢派发`（Grand Central Dispatch，GCD），block 是一种在 C、C++、OC 中使用的`词法闭包`（lexical closure）
 
-![在类中新增另一个实例变量前后的数据布局图](https://github.com/Mayan29/ReadingNotes/blob/master/02.《Effective%20Objective-C%202.0》读书笔记/DATA/pic02.png)
+![block](https://github.com/Mayan29/Blog/blob/master/Notes/Images/02-image04.png)
 
 - 在存放 block 对象的内存区域中，首个变量是 isa，指向 Class 对象的指针；
 - 最重要的就是 invoke 变量，这是个函数指针，指向 block 的实现代码；
@@ -741,7 +721,7 @@ _queue = dispatch_queue_create("syncQueue", NULL);
 
 有个更优的方法是，使用栅栏块来实现属性的设置方法，对属性的读取操作可以并发执行，但是写入操作却必须单独执行了。测试一下性能，发现这种做法比使用串行队列要快。
 
-![在类中新增另一个实例变量前后的数据布局图](https://github.com/Mayan29/ReadingNotes/blob/master/02.《Effective%20Objective-C%202.0》读书笔记/DATA/pic03.png)
+![block](https://github.com/Mayan29/Blog/blob/master/Notes/Images/02-image05.png)
 
 ```objc
 _queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
