@@ -31,7 +31,7 @@ Objective-C 的重要工作都由 runtime 组件而非编译器来完成，所�
 
 ## 2. 在类的头文件中尽量少引入其他头文件
 
-与 C 和 C++ 一样，OC 也使用`头文件`（header file）和`实现文件`（implementation file）来区隔代码。用 OC 编写的任何类几乎都需要引入 Foundation.h，如果包含 UI 控件，需要引入 UIKit.h
+与 C 和 C++ 一样，OC 也使用`头文件`（header file）和`实现文件`（implementation file）来区隔代码。用 OC 编写的任何类几乎都需要引入 `Foundation.h`，如果包含 UI 控件，需要引入 `UIKit.h`
 
 一般来说，应在某个类的头文件中使用`前向声明`（forward declaring）来提及别的类，这样做可以尽量降低类之间的耦合。
 
@@ -44,12 +44,10 @@ Objective-C 的重要工作都由 runtime 组件而非编译器来完成，所�
 
 ## 3.多用字面量语法，少用与之等价的方法
 
-使用`字面量语法`（literal syntax）的好处是可以缩减源代码长度，使其更为易读。其本质为一种`语法糖`（syntactic sugar），以数组为例，其效果等于是先创建一个数组，然后把方括号里的所有对象都加到这个数组中。但是数组元素中不能有 nil，因为 arrayWithObjects: 方法会依次处理各个参数，直到发现 nil 为止，如果中间元素是 nil，该方法会提前结束。这个问题同样适用于字典 dictionaryWithObjectsAndKeys:
-
-使用字面量语法创建出来的字符串、数组、字典都是不可变的，如果想变为可变的，需要复制一份：
+使用`字面量语法`（literal syntax）的好处是可以缩减源代码长度，使其更为易读。其本质为一种`语法糖`（syntactic sugar），以数组为例，其效果等于是先创建一个数组，然后把方括号里的所有对象都加到这个数组中。但是数组元素中不能有 nil，因为 arrayWithObjects: 方法会依次处理各个参数，直到发现 nil 为止，如果中间元素是 nil，该方法会提前结束。这个问题同样适用于字典。
 
 ```objc
-NSMutableArray *mutable = [@[@1, @2, @3] mutableCopy];
+NSArray *arr = @[@1, @2, @3];
 ```
 
 
@@ -94,6 +92,7 @@ extern const NSTimeInterval MYViewAnimationDuration;
 // .m
 const NSTimeInterval MYViewAnimationDuration = 0.3;
 ```
+
 
 ## 5. 用枚举表示状态、选项、状态码
 
@@ -167,7 +166,7 @@ switch (_currentState) {
 @end
 ```
 
-以上写法一般是 Java 和 C++ 的写法，而 OC 代码却很少这么做。这种写法的问题是：对象布局在`编译期`（compile time）就已经固定了。只要碰到访问 _fistName 变量的代码，编译器就把其替换为`偏移量`（offset），这个偏移量是`硬编码`（hardcode），表示该变量距离存放对象的内存区域的起始地址有多远。这样做目前来看没有问题，但是如果又加了一个实例变量，那就麻烦了。比如在 _firstName 之前又多了一个实例变量：
+以上写法一般是 Java 和 C++ 的写法，而 Objective-C 代码却很少这么做。这种写法的问题是：对象布局在`编译期`（compile time）就已经固定了。只要碰到访问 `_fistName` 变量的代码，编译器就把其替换为`偏移量`（offset），这个偏移量是`硬编码`（hardcode），表示该变量距离存放对象的内存区域的起始地址有多远。这样做目前来看没有问题，但是如果又加了一个实例变量，那就麻烦了。比如在 `_firstName` 之前又多了一个实例变量：
 
 ```objc
 @interface MYPerson : NSObject {
@@ -179,17 +178,41 @@ switch (_currentState) {
 @end
 ```
 
-原来表示 _firstName 的偏移量现在却指向 _dataOfBirth，把偏移量硬编码于其中的那些代码都会读取到错误的值
+原来表示 `_firstName` 的偏移量现在却指向 `_dataOfBirth`，把偏移量硬编码于其中的那些代码都会读取到错误的值
 
-![在类中新增另一个实例变量前后的数据布局图](https://github.com/Mayan29/ReadingNotes/blob/master/02.《Effective%20Objective-C%202.0》读书笔记/DATA/pic01.png)
+![在类中新增另一个实例变量前后的数据布局图](https://github.com/Mayan29/Blog/blob/master/Notes/Images/02-image02.jpg)
 
 如果代码使用了编译期间计算出来的偏移量，那么在修改类定义之后必须重新编译，否则就会出错。
 
-OC 的做法是，把实例变量当做一种存储偏移量所用的`特殊变量`（special variable），交由`类对象`（class object）保管，偏移量会在运行期查找，如果类的定义变了，那么存储的偏移量也就变了，所以总能使用正确的偏移量，甚至可以在运行期向类中新增实例变量。
+Objective-C 的做法是，把实例变量当做一种存储偏移量所用的`特殊变量`（special variable），交由`类对象`（class object）保管，偏移量会在运行期查找，如果类的定义变了，那么存储的偏移量也就变了，所以总能使用正确的偏移量，甚至可以在运行期向类中新增实例变量。
 
-这个问题还有一种解决方法，就是尽量不要直接访问实例变量，应该通过存取方法来做。OC 这门语言就是根据名称自动创建出存取方法，也就是@property语法。
+这个问题还有一种解决方法，就是尽量不要直接访问实例变量，应该通过存取方法来做。Objective-C 这门语言就是根据名称自动创建出存取方法，也就是 @property 语法。
+
+### 属性特质
+
+#### 原子性
 
 所有属性都声明为 nonatomic 是因为：在 iOS 中使用同步锁开销较大，一般不要求属性必须是原子的，因为这并不能保证线程安全，若要实现线程安全，还需采用更为深层的锁定机制才行。例如，一个线程在连续多次读取某属性值的过程中有别的线程在同时改写改值，那么即便将属性声明为 atomic 也还是会读到不同的属性值。
+
+#### 读写权限
+
+readwrite / readonly
+
+#### 内存管理语义
+
+■ assign：纯量类型（scalar type），简单赋值操作
+
+■ strong：拥有关系（owning relationship），为这种属性设置新值时，设置方法会先保留新值，并释放旧值，然后再将新值设置上去。
+
+■ weak：非拥有关系（nonowning relationship），为这种属性设置新值时，设置方法既不保留新值，也不释放旧值，类似 assign
+
+■ copy：拷贝（copy），当属性类型为 NSString* 时，经常用此特质来保护其封装性，因为传递给设置方法的新值有可能指向一个 NSMutableString 类的实例，此类是 NSString 的子类，如果不拷贝字符串，那么设置完属性后，字符串的值就会在对象不知情的情况被修改
+
+#### 方法名
+
+```objc
+@property (nonatomic, getter=isOn) BOOL on;
+```
 
 
 ## 7. 在对象内部尽量直接访问实例变量
