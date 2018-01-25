@@ -1,33 +1,35 @@
 # 《Effective Objective-C 2.0》读书笔记
 
+![封面](https://github.com/Mayan29/Blog/blob/master/Notes/Images/02-image01.jpg)
 
-![封面](https://github.com/Mayan29/ReadingNotes/blob/master/02.《Effective%20Objective-C%202.0》读书笔记/DATA/pic00.png)
+> 作者：Matt Galloway
+> 
+> 出版日期：2014-1
+> 
+> 豆瓣地址：https://book.douban.com/subject/25829244/
 
+## 1. 了解 Objective-C 语言
 
-
-## 1. 了解 Objective-C
-
-OC 使用`消息结构`（messaging structure）而不是`函数调用`（function calling），区别如下：
+OC 使用`消息结构`（messaging structure）而不是`函数调用`（function calling），写法如下：
 
 ```objc
+// Objective-C
 Object *obj = [Object new];
 [obj performWith: parameter1 and: parameter2];
 ```
 
-```objc
+```c++
+// C++
 Object *obj = new Object;
 obj->perform(parameter1, parameter2);
 ```
 
-主要区别：
+使用消息结构的语言，运行时执行的代码由运行环境来决定；而使用函数调用的语言，则由编译器决定。如果调用的函数是多态的，那么在运行时就要按照`虚方法表`（virtual table）来查出到底应该执行哪个函数实现。而消息结构的语言，不论是否多态，总是在运行时才会去查找所要执行的方法。实际上，编译器甚至不关心接收消息的对象是何种类型。接收消息的对象问题也要在运行时处理，其过程叫做`动态绑定`（dynamic binding）。
 
-- 函数调用，运行时执行的代码由编译器决定；消息结构，由运行环境决定；
-- 函数调用，如果调用的函数是多态的，运行时就要按照`虚方法表`（virtual table）来查出应该执行哪个函数实现；消息结构，不论是否动态，总是在运行时才会去查找所要执行的方法，实际上，编译器甚至不关心接收消息的对象是何种类型，接收消息的对象问题也要在运行时处理，其过程叫做`动态绑定`（dynamic binding）
-
-Objective-C 的重要工作都由 runtime 而非编译器来完成，所需的全部数据结构和函数都在 runtime 组件里面，runtime 组件含有全部内存管理方法。runtime 本质上就是一种与开发者编写的代码相链接的`动态库`（dynamic library），其代码能把开发者编写的所有程序粘合起来。
+Objective-C 的重要工作都由 runtime 组件而非编译器来完成，所需的全部数据结构和函数都在 runtime 组件里面，runtime 组件含有全部内存管理方法。runtime 本质上就是一种与开发者编写的代码相链接的`动态库`（dynamic library），其代码能把开发者编写的所有程序粘合起来。
 
 
-## 2.在类的头文件中尽量少引入其他头文件
+## 2. 在类的头文件中尽量少引入其他头文件
 
 与 C 和 C++ 一样，OC 也使用`头文件`（header file）和`实现文件`（implementation file）来区隔代码。用 OC 编写的任何类几乎都需要引入 Foundation.h，如果包含 UI 控件，需要引入 UIKit.h
 
@@ -1015,4 +1017,9 @@ NSCache 胜过 NSDictionary 之处在于：
 
 ## 后记
 
+> 2017-05-05  一次阅读
+> 
 > 去年阅读了一少半，然后因为项目耽搁了，而且笔记没有记得很清楚，所以这次又从头开始看。这本书还是很经典的，介绍了很多细节性的问题，理论性也很强，没有浪费这么长时间。
+> 
+> 2018-01-24  二次阅读
+> 

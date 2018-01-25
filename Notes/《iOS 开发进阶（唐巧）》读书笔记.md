@@ -2,6 +2,12 @@
 
 ![封面](https://github.com/Mayan29/Blog/blob/master/Notes/Images/01-image01.jpg)
 
+> 作者：唐巧
+> 
+> 出版日期：2015-1-1
+> 
+> 豆瓣地址：https://book.douban.com/subject/26287173/
+
 ## 一、CocoaPods 的安装和使用
 
 ### 1. 简介
