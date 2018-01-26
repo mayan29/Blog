@@ -775,41 +775,55 @@ GCD 的队列确实有优先级，不过那是针对整个队列来说的，而�
 如果想令数组中的每个对象都执行某项任务，并且想等待所有任务执行完毕，那么就可以使用 GCD 特性来实现
 
 ```objc
-dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
 dispatch_group_t group = dispatch_group_create();
     
-for (id object in cellArray) {
-    dispatch_group_async(group, queue, ^{
-        // do something
+for (int i = 0; i < cellArray.count; i++) {
+    dispatch_group_async(group, dispatch_get_global_queue(0, 0), ^{
+        sleep(i);
+        NSLog(@"任务 %d 完成", i + 1);
     });
 }
+dispatch_group_notify(group, dispatch_get_main_queue(), ^{
+    NSLog(@"任务全部完成");
+});
     
-dispatch_group_wait(group, DISPATCH_TIME_FOREVER); 
-
-// continue do something
+dispatch_group_wait(group, dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC));
+NSLog(@"dispatch_group_wait 结束");
 ```
 
-如果当前线程不应阻塞，可用 notify 函数来取代 wait
+打印结果为：
 
 ```objc
-dispatch_queue_t mainQueue = dispatch_get_main_queue();
-dispatch_group_notify(group, mainQueue, ^{
-   // continue do something
-});
+任务 1 完成
+任务 2 完成
+dispatch_group_wait 结束
+任务 3 完成
+任务全部完成
 ```
 
 在前面的范例代码中，我们遍历某个数组，并在其每个元素上执行任务，这也可以用另外一个 GCD 函数来实现：
 
 ```objc
-dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-   
-dispatch_apply(cellArray.count, queue, ^(size_t i) {
-    id object = cellArray[i];
-    // do something
+dispatch_apply(cellArray.count, dispatch_get_global_queue(0, 0), ^(size_t size_i) {
+        
+    int i = (int)size_i + 1;
+    sleep(i);
+    NSLog(@"任务 %d 完成", i);
 });
+NSLog(@"任务全部完成");
 ```
 
-这个例子表明，未必总要使用 dispatch_group，然而 dispatch_apply 会持续阻塞，直到所有任务都执行完毕为止。
+打印结果为：
+
+```objc
+任务 1 完成
+任务 2 完成
+任务 3 完成
+任务全部完成
+```
+
+这个例子表明，未必总要使用 dispatch_group，然而 dispatch_apply 会持续阻塞，直到所有任务都执行完毕为止。由此可见：假如把块派给了当前队列，就将导致死锁。若想在后台执行任务，则应使用 `dispatch group`
+
 
 ## 21. 不要使用 dispatch\_get\_current\_queue
 
