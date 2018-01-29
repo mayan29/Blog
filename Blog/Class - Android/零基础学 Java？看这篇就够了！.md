@@ -41,7 +41,7 @@ JRE 仅仅是运行工具，如需要开发工具则需搭建 JDK。JDK 开发�
 编写如下代码保存为 Demo.java
 
 ```java
-class Hello {
+class Demo {
 	public static void main(String[] args) {
 		System.out.println("Hello Java");
 	}
@@ -54,10 +54,10 @@ class Hello {
 $ javac Demo.java 
 ``` 
 
-编译成功后在 Demo.java 文件当前目录下生成 Hello.class 文件，输入如下命令运行：
+编译成功后在 Demo.java 文件当前目录下生成 Demo.class 文件，输入如下命令运行：
 
 ```
-$ java Hello
+$ java Demo
 ```
 
 输出结果为：
@@ -78,15 +78,32 @@ Hello Java
 
 Sublime Text 默认的 Java 处理方式仅仅是编译，Build 后会生成一个 .class 文件，而没有去运行，这时候就需要改配置文件达到编译 + 运行的目的。
 
-1. Tools —> Build System —> New Build System
+##### 1. Tools —> Build System —> New Build System
 
+![icon](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image003.png)
 
+##### 2. 添加如下代码：
 
+```java
+{
+	"shell_cmd": "javac -encoding utf-8 $file_name && java $file_base_name",
+	"file_regex": "^ *\\[javac\\] (,+):([0-9]+):() (.*)$",
+	"selector": "source.java",
+	"encoding": "utf-8"
+}
+```
 
+##### 3. 直接保存，名字随意
 
+![icon](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image004.png)
 
+##### 4. Tools —> Build System —> 选择上一步保存的配置文件
 
+![icon](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image005.png)
 
+##### 5. cmd + B 编译运行，就有输出结果了
+
+![icon](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image006.png)
 
 
 
