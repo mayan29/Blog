@@ -889,37 +889,33 @@ dispatch_sync(queueA, ^{
 
 然而这样做依然死锁，因为 dispatch_get_current_queue 返回的是当前队列，也就是 queueB，这样针对 queueA 的同步派发操作依然会执行，于是还是死锁了。
 
-要解决这个问题，最好的办法就是通过 GCD 提供的功能来设定`队列特有数据`（queue-specific data），可以把任意数据以键值对的形式关联到队列里。最重要之处在于，假如根据指定的 key 获取不到关联数据，系统就会沿着层级体系向上查找，直至找到数据或者到达根队列为止。
+要解决这个问题，最好的办法就是利用 `dispatch_queue_set_specific` 和 `dispatch_get_specific` 给 queue 关联一个 context data，后面再利用这个标识获取到 context data，如果可以获取到说明当前上下文是在自己创建的 queue 中，如果不能获取到则表示当前是在其他队列上。XMPP 中有比较多的使用案例。
 
 ```objc
-dispatch_queue_t queueA = dispatch_queue_create("bifangao.queueA", NULL);
-dispatch_queue_t queueB = dispatch_queue_create("bifangao.queueB", NULL);
-dispatch_set_target_queue(queueB, queueA);
-
-static int kQueueSpecific;
-CFStringRef queueSpecificValue = CFSTR("queueA");
-dispatch_queue_set_specific(queueA, &kQueueSpecific, (void*)queueSpecificValue, (dispatch_function_t)CFRelease);  
-
-dispatch_sync(queueB, ^{
-
-    CFStringRef retrievedValue = dispatch_get_specific(&kQueueSpecific);
-    if (retrievedValue) {
-        // do something
-    }else{
-        dispatch_sync(queueA, ^{
-            // do something
-        });
+dispatch_queue_t queueA = dispatch_queue_create("queueA", NULL);
+dispatch_queue_t queueB = dispatch_queue_create("queueB", NULL);
+    
+const void *queueSpecificKey = @"queueSpecificKey";
+dispatch_queue_set_specific(queueA, queueSpecificKey, &queueSpecificKey, NULL);
+    
+dispatch_async(queueA, ^{
+        
+    if (dispatch_get_specific(queueSpecificKey)) {
+        NSLog(@"queueA - 当前为 queueA 队列");
+    } else {
+        NSLog(@"queueA - 当前为其他队列");
+    }
+});
+    
+dispatch_async(queueB, ^{
+        
+    if (dispatch_get_specific(queueSpecificKey)) {
+        NSLog(@"queueB - 当前为 queueA 队列");
+    } else {
+        NSLog(@"queueB - 当前为其他队列");
     }
 });
 ```
-
-关于下面方法的解释：
-
-```objc
-dispatch_queue_set_specific(queueA, &kQueueSpecific, (void*)queueSpecificValue, (dispatch_function_t)CFRelease);  
-```
-
-这个函数首个参数表示待设置数据的队列，其后两个参数是键与值，键与值都是不透明的 void 指针。对于键来说，需要注意的是，函数是按指针值来比较键的，而不是按照其内容。值可以在其存放任意数据，上面代码使用 CoreFoundation 字符串作为值，因为 ARC 并不会自动管理对象的内存，所以这种对象非常适合充当队列特定数据，它们可以根据需要与相关的 OC Foundation 类无缝衔接。最后一个参数是`析构参数`（destructor function），当队列所占内存为系统所回收，或者有新的值与键相关联时，原有的值对象就会移除，而析构函数也会于此时运行。代码中采用 CFRelease 做析构函数，此函数符合要求，不过也可以采用自定义的函数，在其中调动 CFRelease 清理旧值，并完成其他必要的清理工作。
 
 
 ## 22. Foundation 和 CoreFoundation 无缝桥接
