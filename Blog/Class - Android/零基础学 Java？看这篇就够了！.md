@@ -66,14 +66,6 @@ $ java Demo
 Hello Java
 ```
 
-### Java 名称规范
-
-- 包名：多单词组成时，所有字母都小写  xxxyyyzzz
-
-- 类名、接口名：多单词组成时，所有单词首字母大写  XxxYyyZyy
-
-- 常量名：多单词组成时，每个单词用下划线连接，所有字母都大写  XXX_YYY_ZZZ
-
 ### Mac 使用 Sublime Text 3 搭建 Java 环境
 
 Sublime Text 默认的 Java 处理方式仅仅是编译，Build 后会生成一个 .class 文件，而没有去运行，这时候就需要改配置文件达到编译 + 运行的目的。
@@ -106,9 +98,19 @@ Sublime Text 默认的 Java 处理方式仅仅是编译，Build 后会生成一�
 ![icon](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image006.png)
 
 
+## 二、基本语法
 
+### 名称规范
 
+- 包名：多单词组成时，所有字母都小写  xxxyyyzzz
 
+- 类名、接口名：多单词组成时，所有单词首字母大写  XxxYyyZyy
+
+- 常量名：多单词组成时，每个单词用下划线连接，所有字母都大写  XXX_YYY_ZZZ
+
+### 基本数据类型
+
+Java 语言是强类型语言，对于每一种数据都定义了明确的具体数据类型，在内存中分配了不同大小的内存空间。
 
 
 
