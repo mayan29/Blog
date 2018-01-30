@@ -920,11 +920,11 @@ dispatch_async(queueB, ^{
 
 ## 22. Foundation 和 CoreFoundation 无缝桥接
 
-### 22.1 三种桥接
+### 22.1 三种桥式转换
 
 #### __bridge
 
-ARC 仍然具备这个 OC 对象的所有权
+ARC 仍然具备这个 Objective-C 对象的所有权
 
 #### __bridge\_retained
 
@@ -932,47 +932,46 @@ ARC 仍然具备这个 OC 对象的所有权
 
 #### __bridge\_transfer
 
-CoreFoundation 反向转换 Foundation 类，令 ARC 获得对象所有权
+CoreFoundation 反向转换成 Foundation 类，令 ARC 获得对象所有权
 
 ### 22.2 分析 CFMutableDictionary
 
 ```objc
-CFMutableDictionaryRef CFDictionaryCreateMutable (
-	CFAllocatorRef allocator,
-	CFIndex capacity,
-	const CFDictionaryKeyCallBacks *keyCallBacks,
-	const CFDictionaryValueCallBacks *valueCallBacks
-)
+CFMutableDictionaryRef dic =
+        CFDictionaryCreateMutable(CFAllocatorGetDefault(),
+                                  0,
+                                  &kCFTypeDictionaryKeyCallBacks,
+                                  &kCFTypeDictionaryValueCallBacks);
 ```
 
 首个参数表示将要使用的`内存分配器`（allocator）,CoreFoundation 对象里的数据结构需要占用内存，而分配器负责分配及回收这些内存。通常传入 NULL，表示采用默认的分配器。
 
 第二个参数定义了字典的初始大小。并不会限制字典的最大容量，只是向分配器提示了一开始应该分配多少内存。假如要创建的字典含有 10 个对象，那就向该参数传入 10
 
-最后两个参数值定义了许多回调函数，用于指示字典中的 key 和 value 在遇到各种事件时应该执行何种操作，二者对应的结构体如下：
+最后两个参数值定义了许多回调函数，用于指示字典中的 key 和 value 在遇到各种事件时应该执行何种操作，点击进入这两个参数头文件可以看到其结构体如下：
 
 ```objc
-struct CFDictionaryKeyCallBacks (
-	CFIndex version;
-	CFDictionaryRetainCallBack retain;
-	CFDictionaryReleaseCallBack release;
-	CFDictionaryCopyDescriptionCallBack copyDescription;
-	CFDictionaryEqualCallBack equal;
-	CFDictionaryHashCallBack hash;
-);
+typedef struct {
+    CFIndex version;
+    CFDictionaryRetainCallBack retain;
+    CFDictionaryReleaseCallBack release;
+    CFDictionaryCopyDescriptionCallBack	copyDescription;
+    CFDictionaryEqualCallBack	equal;
+    CFDictionaryHashCallBack hash;
+} CFDictionaryKeyCallBacks;
 ```
 
 ```objc
-struct CFDictionaryValueCallBacks (
-	CFIndex version;
-	CFDictionaryRetainCallBack retain;
-	CFDictionaryReleaseCallBack release;
-	CFDictionaryCopyDescriptionCallBack copyDescription;
-	CFDictionaryEqualCallBack equal;
-);
+typedef struct {
+    CFIndex version;
+    CFDictionaryRetainCallBack retain;
+    CFDictionaryReleaseCallBack release;
+    CFDictionaryCopyDescriptionCallBack	copyDescription;
+    CFDictionaryEqualCallBack equal;
+} CFDictionaryValueCallBacks;
 ```
 
-version 参数用于检测新版与旧版数据结构之间是否兼容，目前应设为 0。结构体中其他成员都是函数指针，它们定义了当各种事件发生时应该采用哪个函数来执行相关任务。比如字典中加入新的 key 和 value，那么就会调用 retain 函数
+version 参数用于检测新版与旧版数据结构之间是否兼容，目前应设为 0。结构体中其他成员都是函数指针，它们定义了当各种事件发生时应该采用哪个函数来执行相关任务。比如字典中加入新的 key 和 value，那么就会调用第二个 retain 函数。
 
 
 ## 23. 构建缓存时选用 NSCache 而非 NSDictionary
@@ -982,17 +981,11 @@ NSCache 胜过 NSDictionary 之处在于：
 1. 当系统资源将要耗尽时，它可以自动删减缓存，如果采用字典，需要自己实现在系统低内存时发送通知删除缓存；
 2. NSCache 还会先行删减最久未使用的对象，如果使用  NSDictionary 自己实现，会十分复杂；
 3. NSCache 并不会拷贝键，而是会保留它，用 NSDictionary 实现的话需要相当复杂的代码。NSCache 对象不拷贝键的原因是：键是由不支持拷贝的对象来充当的；
-4. NSCache 是线程安全的，而 NSDictionary 不具备此优势。
+4. NSCache 是线程安全的，而 NSDictionary 不具备此优势。在开发者不编写加锁代码的前提下，多个线程便可以同时访问 NSCache。
 
 下面这段代码演示了缓存的用法：
 
 ```objc
-#import "MYNetworkFetcher.h"
-
-@implementation MYNetworkFetcher {
-    NSCache *_cache;
-}
-
 - (instancetype)init
 {
     self = [super init];
@@ -1004,29 +997,76 @@ NSCache 胜过 NSDictionary 之处在于：
     return self;
 }
 
-- (void)downloadDataForURL:(NSURL *)url
-{
-    // NSPurgeableData 是 NSMutableData 的子类，当系统资源紧张时，可以把保存
-    NSPurgeableData *cachedData = [_cache objectForKey:url];
-    if (cachedData) {
-        [cachedData beginContentAccess];
-        [self useData:cachedData];
-        [cachedData endContentAccess];
+- (void)downloadDataForURL:(NSURL *)url {
+    NSData *cacheData = [_cache objectForKey:url];
+    if (cacheData) {
+        // get data
     } else {
         MYNetworkFetcher *fetcher = [[MYNetworkFetcher alloc] initWithURL:url];
         [fetcher startWithCompletionHandler:^(NSData *data) {
-            
+            [_cache setObject:data forKey:url cost:data.length];
+            // get data
+        }];
+    }
+}
+```
+
+还有个类叫做 NSPurgeableData，和 NSCache 搭配起来使用，效果更好，此类是 NSMutableData 的子类，而且实现了 NSDiscardableContent 协议。当系统资源紧张时，可以把保存 NSPurgeableData 对象的那块内存释放掉。NSDiscardableContent 协议里定义了名为 `isContentDiscarded` 的方法，可以用来查询相关内存是否已经释放。如果需要访问某个 NSPurgeableData 对象，可以调用其 `beginContentAccess` 方法，告诉它现在还不能丢弃自己所占据的内存。用完之后，调用 `endContentAccess` 方法，告诉它在必要时可以丢弃自己所占据的内存了。如果将 NSPurgeableData 对象加入 NSCache，那么当该对象为系统所丢弃时，也会自动从缓存中移除，通过 NSCache 的 `evictsObjectsWithDiscardedContent` 属性，可以开启或关闭此功能。修改代码如下：
+
+```objc
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        _cache = [NSCache new];
+        _cache.countLimit = 100;  // Cache a maximum of 100 URLs
+        _cache.totalCostLimit = 5 * 1024 * 1024;
+    
+    }
+    return self;
+}
+
+- (void)downloadDataForURL:(NSURL *)url {
+    NSPurgeableData *cacheData = [_cache objectForKey:url];
+    if (cacheData) {
+        [cacheData beginContentAccess];
+        // get data
+        [cacheData endContentAccess];
+    } else {
+        MYNetworkFetcher *fetcher = [[MYNetworkFetcher alloc] initWithURL:url];
+        [fetcher startWithCompletionHandler:^(NSData *data) {
             NSPurgeableData *purgeableData = [NSPurgeableData dataWithData:data];
             [_cache setObject:purgeableData forKey:url cost:purgeableData.length];
-            // 创建好 NSPurgeableData 对象之后，purge 引用计数会多 1，所以无需再调用 beginContentAccess，然后其后必须调用 endContentAccess 将多出来的这个 1 抵消掉
-            [self useData:data];
+            // 创建好 NSPurgeableData 对象以后，其 purge 引用计数会多 1，所以无须再调用 beginContentAccess
+            // 然而其后必须调用 endContentAccess，将多出来的这个 1 抵消掉
+            // get data
             [purgeableData endContentAccess];
         }];
     }
 }
-
-@end
 ```
+
+
+## 24. 精简 initialize 与 load 的实现代码
+
+### load
+
+对于加入 runtime 中的每个类和分类来说，必定会调用此方法，而且仅调用一次。当包含类或分类的程序库载入系统时，就会执行此方法，而这通常就是指应用程序启动的时候。如果类和分类都定义了 load 方法，则先调用类里的，再调用分类里的。
+
+load 方法的问题在于，在执行子类的 load 方法之前，必定会先执行所有超类的 load 方法，如果代码还依赖了其他程序库，那么程序库里相关类的 load 方法也必定会先执行，然而，却无法判断出其中各个类的载入顺序。因此，在 load 方法中使用其他类是不安全的。
+
+而且 load 方法务必实现的精简一些，因为整个应用程序在执行 load 方法时都会堵塞。不要在里面等待锁，也不要调用可能会加锁的方法。实际上 load 真正用途仅在于调试程序，比如可以在分类里编写此方法，用来判断该分类是否已经正确载入系统中。
+
+### initialize
+
+对于每个类来说，该方法会在程序首次用该类之前调用，且只调用一次。它是由运行期系统来调用的，绝不应该通过代码直接调用。和 load 不同之处为，它是懒加载的，也即是说，只有当程序用到了相关类时，才会调用。
+
+此方法和 load 还有个区别是，运行期系统在执行该方法时，可以安全使用并调用任意类的任意方法。而且运行期系统确保只有执行 initialize 的那个线程可以操作类或类实例，其他线程都要先堵塞，等着 initialize 执行完。
+
+最后一个区别是，initialize 方法和其他消息一样，如果某个类未实现它，而其超类实现了，那么就会运行超类的实现代码。
+
+initialize 方法只应该用来设置内部数据，不应该在其中调用其他方法，即便是本类自己的方法，也最好别调用。
+
 
 ## 后记
 
@@ -1036,3 +1076,4 @@ NSCache 胜过 NSDictionary 之处在于：
 > 
 > 2018-01-24  二次阅读
 > 
+> 很多概念性的东西时间长不看就容易遗忘，再次阅读并重新整理了理论知识，获益匪浅。有些知识并不是心里有大概的想法就算掌握，必须形成书面文字或者思路清晰的说出来才是真正的掌握。
