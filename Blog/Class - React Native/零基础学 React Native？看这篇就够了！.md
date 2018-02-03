@@ -17,9 +17,34 @@
 
 ### 核心机制
 
-* 核心机制之一：虚拟 DOM，可以在内存中创建虚拟 DOM 元素。利用虚拟 DOM 来减少对实际 DOM 的操作从而提升性能
+核心机制之一：虚拟 DOM，可以在内存中创建虚拟 DOM 元素。利用虚拟 DOM 来减少对实际 DOM 的操作从而提升性能
 
 
+## 2. 基础语法
 
+### 2.1. Hello World
+
+```js
+import React, { Component } from 'react';
+import { StyleSheet, Text } from 'react-native';
+
+export default class App extends Component<{}> {
+  render() {
+    return (
+      <Text style={styles.helloWorldStyle}>
+        Hello World!
+      </Text>
+    );
+  }
+}
+
+const styles = StyleSheet.create({
+  helloWorldStyle: {
+    fontSize: 20,
+    textAlign: 'center',
+    margin: 100,
+  }
+});
+```
 
 
