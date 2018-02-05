@@ -206,4 +206,78 @@ innerContainer3: {
 
 #### FlexBox 容器属性 - 单个属性修改
 
-alignSelf 其属性同 alignItems 侧轴对齐方式。允许单个 view 有与其他 view 不一样的对齐方式，可覆盖 alignItems（侧轴对齐方式）属性。默认为 auto，表示继承父元素的 alignItems 属性，如果没有父元素，则等同于 stretch。举个例子：其他 view 都是居中对齐，第一个 view 要求顶端对齐，可用此属性。
+alignSelf 其属性同 alignItems 侧轴对齐方式。允许单个 view 有与其他 view 不一样的对齐方式，可覆盖 alignItems（侧轴对齐方式）属性。默认为 auto，表示继承父元素的 alignItems 属性，如果没有父元素，则等同于 stretch。举个例子：其他 view 都是居中对齐，第一个 view 要求顶端对齐，可用此属性。 
+
+### 2.4. 屏幕宽度、高度、分辨率
+
+```js
+import React, { Component } from 'react';
+import { StyleSheet, View, Text, Dimensions } from 'react-native';
+
+export default class ViewTest extends Component<{}> {
+  render() {
+    return (
+      <View style={styles.outViewStyle}>
+        <Text>当前屏幕宽度：{Dimensions.get('window').width}</Text>
+        <Text>当前屏幕高度：{Dimensions.get('window').height}</Text>
+        <Text>当前屏幕分辨率：{Dimensions.get('window').scale}</Text>
+      </View>
+    );
+  }
+}
+
+const styles = StyleSheet.create({
+  outViewStyle: {
+    flex : 1,                   // 占满屏幕
+    justifyContent : 'center',  // 主轴方向居中
+    alignItems : 'center',      // 侧轴方向居中
+    backgroundColor : 'gray',
+  },
+});
+```
+
+![屏幕宽度、高度、分辨率](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image010.png)
+
+### 2.5. Text
+
+```js
+import React, { Component } from 'react';
+import { StyleSheet, View, Text } from 'react-native';
+
+export default class ViewTest extends Component<{}> {
+  render() {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.textStyle}>
+          这是一段文字！！！
+        </Text>
+      </View>
+    );
+  }
+}
+
+const styles = StyleSheet.create({
+  container: {
+    marginTop : 25,
+    backgroundColor : '#F5FCFF',
+  },
+  textStyle: {
+    backgroundColor : 'transparent',  // 设置无背景
+    color : 'green',
+    textAlign : 'right',
+    width : 300,
+    lineHeight : 30,
+    fontSize : 20,
+    fontWeight : 'bold',
+    letterSpacing : 5,  // 字间距
+    textDecorationLine : 'underline',  // 下划线
+    textDecorationStyle : 'double',   // 下划线线条数
+    textDecorationColor : 'black',  // 下划线颜色
+  }
+});
+```
+
+### 2.6. Image
+
+
+
