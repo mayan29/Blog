@@ -10,24 +10,21 @@ Java 是 SUN（Stanford University Network，斯坦福大学网络公司）1995 
 
 ### Java 语言的三种技术架构
 
-Java EE（Java Platform，Enterprise Edition，企业版）
-Java 5.0 以前称为 J2EE。Java EE 是在 Java SE 的基础上构建的。简单点说 Java EE 是用来做网站的。
+__Java__ __EE__（Java Platform，Enterprise Edition，企业版），Java 5.0 以前称为 J2EE。Java EE 是在 Java SE 的基础上构建的。简单点说 Java EE 是用来做网站的。
 
-Java SE（Java Platform，Standard Edition，标准版）
-Java 5.0 以前称为 J2SE。它允许开发和部署在桌面、服务器、嵌入式环境和实时环境中使用的 Java 应用程序。简单点说 Java SE 是用来做电脑上运行的软件的。
+__Java__ __SE__（Java Platform，Standard Edition，标准版），Java 5.0 以前称为 J2SE。它允许开发和部署在桌面、服务器、嵌入式环境和实时环境中使用的 Java 应用程序。简单点说 Java SE 是用来做电脑上运行的软件的。
 
-Java ME（Java Platform，Micro Edition，微型版）
-Java 5.0 以前称为 J2ME。Java ME 为在移动设备和嵌入式设备上运行的应用程序提供环境。简单点说 Java ME 是用来做手机软件的。
+__Java__ __ME__（Java Platform，Micro Edition，微型版），Java 5.0 以前称为 J2ME。Java ME 为在移动设备和嵌入式设备上运行的应用程序提供环境。简单点说 Java ME 是用来做手机软件的。
 
 ### Java 语言特点
 
-跨平台性。只需在操作系统上安装 Java 虚拟机（JVM，Java Virtual Machine）即可，由 JVM 来负责 Java 程序在该系统中的运行。
+__跨平台性__。只需在操作系统上安装 Java 虚拟机（JVM，Java Virtual Machine）即可，由 JVM 来负责 Java 程序在该系统中的运行。
 
 ### Java 语言环境搭建
 
-JRE（Java Runtime Environment，Java 运行环境）。包括 JVM 和 Java 程序所需的核心类库等。
+__JRE__（Java Runtime Environment，Java 运行环境）。包括 JVM 和 Java 程序所需的核心类库等。
 
-JDK（Java Development Kit，Java 开发工具包）。其中包含 Java 的开发工具（编译工具、打包工具等）和 JRE，所以安装了 JDK 就不用再单独安装 JRE 了。下载地址：[http://www.oracle.com](http://www.oracle.com)
+__JDK__（Java Development Kit，Java 开发工具包）。其中包含 Java 的开发工具（编译工具、打包工具等）和 JRE，所以安装了 JDK 就不用再单独安装 JRE 了。下载地址：[http://www.oracle.com](http://www.oracle.com)
 
 ![icon](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image002.png)
 
@@ -70,11 +67,11 @@ Hello Java
 
 Sublime Text 默认的 Java 处理方式仅仅是编译，Build 后会生成一个 .class 文件，而没有去运行，这时候就需要改配置文件达到编译 + 运行的目的。
 
-##### 1. Tools —> Build System —> New Build System
+#### 1. Tools —> Build System —> New Build System
 
 ![icon](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image003.png)
 
-##### 2. 添加如下代码：
+#### 2. 添加如下代码：
 
 ```java
 {
@@ -85,15 +82,15 @@ Sublime Text 默认的 Java 处理方式仅仅是编译，Build 后会生成一�
 }
 ```
 
-##### 3. 直接保存，名字随意
+#### 3. 直接保存，名字随意
 
 ![icon](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image004.png)
 
-##### 4. Tools —> Build System —> 选择上一步保存的配置文件
+#### 4. Tools —> Build System —> 选择上一步保存的配置文件
 
 ![icon](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image005.png)
 
-##### 5. cmd + B 编译运行，就有输出结果了
+#### 5. cmd + B 编译运行，就有输出结果了
 
 ![icon](https://github.com/Mayan29/Blog/blob/master/Blog/Images/image006.png)
 
@@ -114,7 +111,7 @@ Sublime Text 默认的 Java 处理方式仅仅是编译，Build 后会生成一�
 
 Java 语言是强类型语言，对于每一种数据都定义了明确的具体数据类型，在内存中分配了不同大小的内存空间。
 
-整数型：byte、short（2 byte）、int（4 byte）、long（8 byte）
+__整数型__：byte、short（2 byte）、int（4 byte）、long（8 byte）
 
 > 1 byte = 8 bit，1 字节 = 8 位
 > 
@@ -124,25 +121,25 @@ Java 语言是强类型语言，对于每一种数据都定义了明确的具体
 > 
 > 1 int 取值范围是 -2^31 ~ 2^31-1
 
-浮点型：float（4 byte）、double（8 byte）
+__浮点型__：float（4 byte）、double（8 byte）
 
-字符型：char（1 byte）
+__字符型__：char（1 byte）
 
 > 1 char 取值范围是 0 ~ 65535，也就是 0 ~ 2^16-1
 
-布尔型：boolean（1 byte）
+__布尔型__：boolean（1 byte）
 
 ### 逻辑运算符
 
-&：无论左边是 true 还是 false，右边都运算；
+__&__：无论左边是 true 还是 false，右边都运算；
 
-&&：当左边为 false 时，右边不运算；
+__&&__：当左边为 false 时，右边不运算；
 
-|：无论左边是 true 还是 false，右边都运算；
+__|__：无论左边是 true 还是 false，右边都运算；
 
-||：当左边为 true 时，右边不运算；
+__||__：当左边为 true 时，右边不运算；
 
-^：两边结果相同为 false，两边结果不同为 true
+__^__：两边结果相同为 false，两边结果不同为 true
 
 > true ^ ture = false;
 > 
@@ -174,23 +171,23 @@ Java 语言是强类型语言，对于每一种数据都定义了明确的具体
 
 ### 位运算符
 
-左移 / 右移
+__左移__ __/__ __右移__
 
 ```java
 3 << 2 = 12;  // 相当于 3 乘以 2 ^ 2，3 * 4
-6 >> 1 = 3;  // 相当于 6 除以 2 ^ 1，6 / 2
+6 >> 1 = 3;   // 相当于 6 除以 2 ^ 1，6 / 2
 ```
 
 > 应用场景：乘法需要转换成二进制位位相乘，比较费事，使用位运算节省时间
 
-有符号位移 / 无符号位移
+__有符号位移__ __/__ __无符号位移__
 
 ```java
--6 >> 1;  // 右移后，左边高位用 1 补位
+-6 >> 1;   // 右移后，左边高位用 1 补位
 -6 >>> 1;  // 右移后，左边高位用 0 补位
 ```
 
-与运算 / 或运算 / 异或运算
+__与运算__ __/__ __或运算__ __/__ __异或运算__
 
 ```java
 6 & 5 = 4;
@@ -198,7 +195,7 @@ Java 语言是强类型语言，对于每一种数据都定义了明确的具体
 6 ^ 5 = 3;
 ```
 
-反码
+__反码__
 
 
 
