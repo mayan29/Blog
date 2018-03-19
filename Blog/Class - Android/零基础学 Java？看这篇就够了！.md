@@ -4,11 +4,11 @@
 
 ## 一、简介
 
-### Java 语言概述
+### 1. Java 语言概述
 
 Java 是 SUN（Stanford University Network，斯坦福大学网络公司）1995 年推出的一门高级编程语言，是一种面向 Internet 的编程语言。
 
-### Java 语言的三种技术架构
+### 2. Java 语言的三种技术架构
 
 __Java__ __EE__（Java Platform，Enterprise Edition，企业版），Java 5.0 以前称为 J2EE。Java EE 是在 Java SE 的基础上构建的。简单点说 Java EE 是用来做网站的。
 
@@ -16,11 +16,11 @@ __Java__ __SE__（Java Platform，Standard Edition，标准版），Java 5.0 以
 
 __Java__ __ME__（Java Platform，Micro Edition，微型版），Java 5.0 以前称为 J2ME。Java ME 为在移动设备和嵌入式设备上运行的应用程序提供环境。简单点说 Java ME 是用来做手机软件的。
 
-### Java 语言特点
+### 3. Java 语言特点
 
 __跨平台性__。只需在操作系统上安装 Java 虚拟机（JVM，Java Virtual Machine）即可，由 JVM 来负责 Java 程序在该系统中的运行。
 
-### Java 语言环境搭建
+### 4. Java 语言环境搭建
 
 __JRE__（Java Runtime Environment，Java 运行环境）。包括 JVM 和 Java 程序所需的核心类库等。
 
@@ -97,7 +97,7 @@ Sublime Text 默认的 Java 处理方式仅仅是编译，Build 后会生成一�
 
 ## 三、基本语法
 
-### 名称规范
+### 1. 名称规范
 
 - 包名：多单词组成时，所有字母都小写 xxxyyyzzz
 
@@ -107,7 +107,7 @@ Sublime Text 默认的 Java 处理方式仅仅是编译，Build 后会生成一�
 
 - 常量名：多单词组成时，每个单词用下划线连接，所有字母都大写 XXX_YYY_ZZZ
 
-### 基本数据类型
+### 2. 基本数据类型
 
 Java 语言是强类型语言，对于每一种数据都定义了明确的具体数据类型，在内存中分配了不同大小的内存空间。
 
@@ -129,7 +129,7 @@ __字符型__：char（1 byte）
 
 __布尔型__：boolean（1 byte）
 
-### 逻辑运算符
+### 3. 逻辑运算符
 
 __&__：无论左边是 true 还是 false，右边都运算；
 
@@ -169,7 +169,7 @@ __^__：两边结果相同为 false，两边结果不同为 true
 > n = n - m;
 > ```
 
-### 位运算符
+### 4. 位运算符
 
 __左移__ __/__ __右移__
 
