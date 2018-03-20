@@ -3,11 +3,7 @@
 
 ## iOS
 
-01. [常用代码块](https://github.com/Mayan29/Blog/blob/master/Blog/Class%20-%20iOS/%E5%B8%B8%E7%94%A8%E4%BB%A3%E7%A0%81%E5%9D%97.md)
-
 ## Android
-
-01. [零基础学 Java？看这篇就够了！](https://github.com/Mayan29/Blog/blob/master/Blog/Class%20-%20Android/%E9%9B%B6%E5%9F%BA%E7%A1%80%E5%AD%A6%20Java%EF%BC%9F%E7%9C%8B%E8%BF%99%E7%AF%87%E5%B0%B1%E5%A4%9F%E4%BA%86%EF%BC%81.md)
 
 ## React Native
 
@@ -21,4 +17,4 @@
 
 04. [《AV Foundation 开发秘籍》读书笔记](https://github.com/Mayan29/ReadingNotes/blob/master/04.《AV%20Foundation%20开发秘籍》读书笔记/《AV%20Foundation%20开发秘籍》读书笔记.md)
 
-05. [《JavaScript DOM 编程艺术（第2版）》]()
+05. [《JavaScript DOM 编程艺术（第2版）》读书笔记](https://github.com/Mayan29/Blog/blob/master/Notes/05.《JavaScript%20DOM%20编程艺术（第2版）》读书笔记.md)
