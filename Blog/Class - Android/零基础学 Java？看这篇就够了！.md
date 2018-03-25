@@ -195,14 +195,145 @@ __与运算__ __/__ __或运算__ __/__ __异或运算__
 6 ^ 5 = 3;
 ```
 
-__反码__
+### 5. 循环语句
+
+#### 打印九九乘法表
+
+下面例子不是介绍九九乘法表的算法，而是 `\t` 制表符的应用。如果用空格，打印中在某一行会没有对齐，如果用制表符则不用考虑这个问题：
+
+```java
+for (int i = 1; i <= 9; i++) {
+	for (int j = 1; j <= i; j++) {
+		System.out.println(j + "*" + i + "=" + j*i + "\t");
+	}
+}
+```
+
+#### 跳出多层循环嵌套
+		
+如下例子，仅仅打印了 `1*1=1` 就跳出循环了：
+
+```java
+w: for (int i = 1; i <= 9; i++) {
+	q: for (int j = 1; j <= i; j++) {
+		System.out.println(j + "*" + i + "=" + j*i + "\t");
+		break w;
+	}
+}
+```
+
+### 6. 数组
+
+#### 初始化
+
+```java
+// 一维数组
+int[] arr = new int[3];
+int[] arr = {1, 2, 3};
+
+// 二维数组
+int[][] arr = new int[3][];  // 二维数组第二维可以不定义长度，默认第一维指向为空
+System.out.println(arr[1]);  // 打印结果为 null
+
+int[][] arr = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+```
+
+#### 数组存储原理
+
+```java
+int[] x = new int[3];
+```
+
+以上面创建数组为例，x 存储到栈内存中，new int[3] 存储到堆内存中。x 存储的不是 new int[3] 本身，而是 new int[3] 的起始内存地址（假如是 0x0079），也就是 x 指向了该内存地址。并且堆内存中，只要被创建，就会有初始化值。
+
+当不想要 x 这个数组了，则将 x 置为 null，x 不指向之前的地址了，数组在堆内存中则不被使用了。java 虚拟机则将该数组视为垃圾，但是不会立刻将其清除掉，会不定时的启动垃圾回收机制，将该数组实体在堆内存中清除。
+
+> 垃圾回收机制
+> 
+> c++ 需要程序员自己将堆内存中垃圾清除，java 将这里做了优化。
+
+```java
+int[] arr2 = new int[5];
+System.out.println(arr2);
+```
+
+打印的结果为：`[I@43556938`，`[` 代表数组，`I` 代表 int 数据类型，`@` 右边的为数组内存存放地址，其为哈希算法算出来的哈希值。
+
+#### 数组排序
+
+实际开发中只调用 `Arrays.sort(arr)` 即可实现排序，但是需要声明 `import java.util.Arrays` 包：
+
+```java
+import java.util.Arrays;
+
+class Test {
+	public static void main(String[] args) {
+
+		int[] arr = {5, 2, 7, 4, 1, 3, 6};
+		Arrays.sort(arr);
+
+		System.out.println(Arrays.toString(arr));
+	}
+}
+```
+
+### 7. 进制转换
+
+#### 十进制转换成二进制
+
+```java
+class Test {
+	public static void main(String[] args) {
+
+		System.out.println(toBin(6));
+	}
+
+	public static String toBin(int num) {
+
+		StringBuffer sb = new StringBuffer();
+		while(num > 0) {
+			sb.append(num % 2);
+			num = num / 2;
+		}
+		return new String(sb.reverse());
+	}
+}
+```
+
+#### 十进制转换成十六进制
 
 
 
 
+## 四、函数
 
+### 1. 重载
 
+#### 定义
 
+在同一个类中，允许存在一个以上的同名函数，只要它们的参数个数或者参数类似不同即可。
+
+#### 应用场景
+
+当定义的功能相同，但参与运算的未知内容不同。那么，这时就定义一个函数名称以表示其功能，方便阅读，而通过参数列表的不同来区分多个同名函数。
+
+#### 判断是否重载
+
+```java
+void show(int a, char b, double c){}
+
+a.
+void show(int x, char y, double z){}  // 没有，因为和原函数一样
+
+b.
+void show(int a, double b, char c){}  // 重载，因为参数类型不同   
+
+c.
+void show(int a, char b){}  // 重载，因为参数个数不同
+
+d.
+int show(int a, double b, char c){}  // 没有，重载和返回值类型没有关系
+```
 
 
 
