@@ -141,13 +141,13 @@ __||__：当左边为 true 时，右边不运算；
 
 __^__：两边结果相同为 false，两边结果不同为 true
 
-> true ^ ture = false;
+> true ^ ture   = false;
 > 
 > false ^ false = false;
 > 
-> true ^ false = true;
+> true ^ false  = true;
 > 
-> false ^ true = true;
+> false ^ true  = true;
 
 > 应用场景
 > 
@@ -156,17 +156,17 @@ __^__：两边结果相同为 false，两边结果不同为 true
 > 2. 数值交换
 > 
 > ```java
-> n = n ^ m;
-> m = n ^ m;
-> n = n ^ m;
+> n = n^m;
+> m = n^m;
+> n = n^m;
 > ```
 > 
 > 这种方法比加减方法好，因为如果 n 和 m 的值非常大，容易超出 int 范围
 > 
 > ```java
-> n = n + m;
-> m = n - m;
-> n = n - m;
+> n = n+m;
+> m = n-m;
+> n = n-m;
 > ```
 
 ### 4. 位运算符
@@ -244,20 +244,18 @@ int[][] arr = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
 int[] x = new int[3];
 ```
 
-以上面创建数组为例，x 存储到栈内存中，new int[3] 存储到堆内存中。x 存储的不是 new int[3] 本身，而是 new int[3] 的起始内存地址（假如是 0x0079），也就是 x 指向了该内存地址。并且堆内存中，只要被创建，就会有初始化值。
+以上面创建数组为例，x 存储到栈内存中，new int[3] 存储到堆内存中。x 存储的不是 new int[3] 本身，而是 new int[3] 的起始内存地址（例如是 0x0079），也就是 x 指向了该内存地址。并且堆内存中，只要被创建，就会有初始化值。
 
 当不想要 x 这个数组了，则将 x 置为 null，x 不指向之前的地址了，数组在堆内存中则不被使用了。java 虚拟机则将该数组视为垃圾，但是不会立刻将其清除掉，会不定时的启动垃圾回收机制，将该数组实体在堆内存中清除。
 
-> 垃圾回收机制
-> 
-> c++ 需要程序员自己将堆内存中垃圾清除，java 将这里做了优化。
+> 垃圾回收机制不同于 c++，需要程序员自己将堆内存中垃圾清除，java 将这里做了优化。
 
 ```java
 int[] arr2 = new int[5];
 System.out.println(arr2);
 ```
 
-打印的结果为：`[I@43556938`，`[` 代表数组，`I` 代表 int 数据类型，`@` 右边的为数组内存存放地址，其为哈希算法算出来的哈希值。
+打印的结果为：`[I@43556938`，`[` 代表数组，`I` 代表 int 数据类型，`@` 右边的为数组内存存放地址，其为哈希算法算出来的哈希值。如果是二维数组，其打印结果为 `[[I@43556938`
 
 #### 数组排序
 
@@ -282,27 +280,129 @@ class Test {
 #### 十进制转换成二进制
 
 ```java
+// 方法一
 class Test {
 	public static void main(String[] args) {
 
-		System.out.println(toBin(6));
+		System.out.println(Integer.toBinaryString(6));
+	}
+}
+```
+
+```java
+// 方法二
+class Test {
+	public static void main(String[] args) {
+
+		toBin(6);
 	}
 
-	public static String toBin(int num) {
+	public static void toBin(int num) {
 
 		StringBuffer sb = new StringBuffer();
-		while(num > 0) {
+
+		while (num > 0) {
+
 			sb.append(num % 2);
-			num = num / 2;
+			num = num >> 1;
 		}
-		return new String(sb.reverse());
+
+		System.out.println(sb.reverse());
+	}
+}
+```
+
+```java
+// 方法三（查表法）
+class Test {
+	public static void main(String[] args) {
+
+		toBin(6);
+	}
+
+	public static void toBin(int num) {
+
+		char[] chars = {'0', '1'};
+
+		StringBuffer sb = new StringBuffer();
+
+		while (num > 0) {
+
+			sb.append(chars[num & 1]);
+			num = num >> 1;
+		}
+
+		System.out.println(sb.reverse());
 	}
 }
 ```
 
 #### 十进制转换成十六进制
 
+```java
+// 方法一
+class Test {
+	public static void main(String[] args) {
 
+		System.out.println(Integer.toHexString(60));
+	}
+}
+```
+
+```java
+// 方法二
+class Test {
+	public static void main(String[] args) {
+
+		toHex(60);
+	}
+
+	public static void toHex(int num) {
+
+		StringBuffer sb = new StringBuffer();
+
+		for (int x = 0; x < 8; x++) {
+			
+			// 15 的二进制表达形式为 1111，num 和 15 与运算结果为最后四位的值
+			int tmp = num & 15;  			
+			if (tmp > 9) {
+				sb.append((char)(tmp - 10 + 'a'));
+			} else {
+				sb.append(tmp);
+			}
+			num = num >> 4;
+		}
+
+		System.out.println(sb.reverse());
+	}
+}
+```
+
+```java
+// 方法三（查表法）
+class Test {
+	public static void main(String[] args) {
+
+		toHex(60);
+		System.out.println(Integer.toHexString(60));
+	}
+
+	public static void toHex(int num) {
+
+		char[] chars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+
+		StringBuffer sb = new StringBuffer();
+
+		for (int x = 0; x < 8; x++) {
+
+			sb.append(chars[num & 15]);
+			num = num >> 4;
+		}
+
+		System.out.println(sb.reverse());
+	}
+}
+```
 
 
 ## 四、函数

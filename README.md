@@ -1,13 +1,10 @@
 # Blog
 
 
-## iOS
+01. [零基础学 Java？看这篇就够了！](https://github.com/Mayan29/Blog/blob/master/Blog/零基础学%20Java？看这篇就够了！.md)
 
-## Android
+02. [iOS 保持界面流畅的技巧](https://mayan29.github.io)
 
-01. [零基础学 Java？看这篇就够了！](https://github.com/Mayan29/Blog/blob/master/Blog/Class%20-%20Android/零基础学%20Java？看这篇就够了！.md)
-
-## React Native
 
 ## 读书笔记
 
