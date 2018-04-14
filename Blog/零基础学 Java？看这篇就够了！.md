@@ -407,7 +407,16 @@ class Test {
 
 ## 四、函数
 
-### 1. 重载
+### 1. 面向对象
+
+三个特征：__封装__、__继承__、__多态__。
+
+### 2. 变量
+
+成员变量：定义在函数之外，存在堆内存中。
+局部变量：定义在函数之内，存在栈内存中。
+
+### 3. 重载
 
 #### 定义
 
@@ -435,7 +444,31 @@ d.
 int show(int a, double b, char c){}  // 没有，重载和返回值类型没有关系
 ```
 
+### 4. 封装
 
+__private__：私有权限修饰符，用于修饰类中的成员变量、成员函数。只能在该类中访问，在外部不能访问。
+
+```java
+class Person {
+
+	private int age;
+	private void run () {
+		System.out.println("I`m running.");
+	}
+}
+
+class Demo {
+
+	public static void main(String[] args) {
+		
+		Person p = new Person();
+		p.age = 20;
+		p.run();
+	}
+}
+```
+
+上面例子中，Person 类的 `age` 不可以赋值，同时 `run()` 方法也不可调用。
 
 
 
